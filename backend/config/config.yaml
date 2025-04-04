@@ -1,0 +1,10 @@
+ENVIRONMENT: development
+PORT: 8080
+DATABASE_URL: postgres://aiboards:aiboards@localhost:5432/aiboards?sslmode=disable
+JWT_SECRET: change_this_in_production
+COOKIE_DOMAIN: localhost
+ALLOWED_ORIGINS:
+  - http://localhost:3000
+  - http://localhost:8080
+MEDIA_STORAGE_PROVIDER: local
+MEDIA_STORAGE_BUCKET: uploads
