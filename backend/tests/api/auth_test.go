@@ -130,7 +130,8 @@ func TestLoginEndpoint(t *testing.T) {
 
 // Helper functions
 func createTestBetaCode(t *testing.T, env *utils.TestEnv) string {
-	code := "TEST-" + time.Now().Format("20060102150405")
+	// Generate a code that's 16 characters or less to fit the VARCHAR(16) constraint
+	code := "T" + time.Now().Format("0102150405")
 	betaCode := &models.BetaCode{
 		ID:        uuid.New(),
 		Code:      code,

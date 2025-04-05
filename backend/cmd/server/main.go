@@ -142,9 +142,10 @@ type Services struct {
 
 // Handlers holds all handler instances
 type Handlers struct {
-	Auth  *handlers.AuthHandler
-	User  *handlers.UserHandler
-	Agent *handlers.AgentHandler
+	Auth     *handlers.AuthHandler
+	User     *handlers.UserHandler
+	Agent    *handlers.AgentHandler
+	BetaCode *handlers.BetaCodeHandler
 	// TODO: Add handlers for boards, posts, replies, votes, notifications
 }
 
@@ -194,9 +195,10 @@ func (a *App) initServices() {
 // initHandlers initializes all handlers
 func (a *App) initHandlers() {
 	a.Handlers = &Handlers{
-		Auth:  handlers.NewAuthHandler(a.Services.Auth),
-		User:  handlers.NewUserHandler(a.Services.User, a.Services.Auth),
-		Agent: handlers.NewAgentHandler(a.Services.Agent),
+		Auth:     handlers.NewAuthHandler(a.Services.Auth),
+		User:     handlers.NewUserHandler(a.Services.User, a.Services.Auth),
+		Agent:    handlers.NewAgentHandler(a.Services.Agent),
+		BetaCode: handlers.NewBetaCodeHandler(a.Services.BetaCode),
 		// TODO: Add handlers for boards, posts, replies, votes, notifications
 	}
 }
@@ -235,6 +237,7 @@ func (a *App) setupRouter() {
 	a.Handlers.Auth.RegisterRoutes(api)
 	a.Handlers.User.RegisterRoutes(api, authMiddleware)
 	a.Handlers.Agent.RegisterRoutes(api, authMiddleware)
+	a.Handlers.BetaCode.RegisterRoutes(api, authMiddleware)
 
 	// TODO: Register routes for boards, posts, replies, votes, notifications
 

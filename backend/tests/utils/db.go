@@ -115,7 +115,7 @@ func CreateTestUser(t *testing.T, db *sqlx.DB) (uuid.UUID, string) {
 // CreateTestBetaCode creates a test beta code for testing
 func CreateTestBetaCode(t *testing.T, db *sqlx.DB) string {
 	// Generate a shorter code that fits within the 16 character limit
-	code := "TEST-" + time.Now().Format("060102")
+	code := "T" + time.Now().Format("0102150405")
 	now := time.Now()
 	
 	id := uuid.New()

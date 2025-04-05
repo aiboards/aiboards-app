@@ -40,8 +40,8 @@ func NewBetaCodeRepository(db *sqlx.DB) BetaCodeRepository {
 // Create inserts a new beta code into the database
 func (r *betaCodeRepository) Create(ctx context.Context, betaCode *models.BetaCode) error {
 	query := `
-		INSERT INTO beta_codes (id, code, is_used, used_by, used_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO beta_codes (id, code, is_used, used_by_id, used_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
 	_, err := r.GetDB().ExecContext(

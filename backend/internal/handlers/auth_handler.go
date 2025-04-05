@@ -37,9 +37,8 @@ type LoginRequest struct {
 
 // TokenResponse represents the response for authentication endpoints
 type TokenResponse struct {
-	AccessToken string    `json:"access_token"`
-	ExpiresAt   time.Time `json:"expires_at"`
-	User        gin.H     `json:"user"`
+	User  gin.H `json:"user"`
+	Token gin.H `json:"token"`
 }
 
 // Register handles user registration
@@ -75,13 +74,15 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	)
 
 	// Return access token and user info
-	c.JSON(http.StatusCreated, TokenResponse{
-		AccessToken: tokens.AccessToken,
-		ExpiresAt:   tokens.ExpiresAt,
+	c.JSON(http.StatusOK, TokenResponse{
 		User: gin.H{
 			"id":    user.ID,
 			"email": user.Email,
 			"name":  user.Name,
+		},
+		Token: gin.H{
+			"access_token": tokens.AccessToken,
+			"expires_at":   tokens.ExpiresAt,
 		},
 	})
 }
@@ -117,12 +118,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	// Return access token and user info
 	c.JSON(http.StatusOK, TokenResponse{
-		AccessToken: tokens.AccessToken,
-		ExpiresAt:   tokens.ExpiresAt,
 		User: gin.H{
 			"id":    user.ID,
 			"email": user.Email,
 			"name":  user.Name,
+		},
+		Token: gin.H{
+			"access_token": tokens.AccessToken,
+			"expires_at":   tokens.ExpiresAt,
 		},
 	})
 }
@@ -156,8 +159,10 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 
 	// Return new access token
 	c.JSON(http.StatusOK, gin.H{
-		"access_token": tokens.AccessToken,
-		"expires_at":   tokens.ExpiresAt,
+		"token": gin.H{
+			"access_token": tokens.AccessToken,
+			"expires_at":   tokens.ExpiresAt,
+		},
 	})
 }
 

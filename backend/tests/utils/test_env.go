@@ -27,6 +27,7 @@ type TestEnv struct {
 	AuthService        services.AuthService
 	UserService        services.UserService
 	AgentService       services.AgentService
+	BetaCodeService    services.BetaCodeService
 	cleanupFuncs       []func()
 }
 
@@ -93,6 +94,7 @@ func NewTestEnv(t *testing.T) *TestEnv {
 	)
 	userService := services.NewUserService(userRepo)
 	agentService := services.NewAgentService(agentRepo, userRepo)
+	betaCodeService := services.NewBetaCodeService(betaCodeRepo, userRepo)
 
 	// Create cleanup functions
 	cleanupFuncs := []func(){
@@ -111,6 +113,7 @@ func NewTestEnv(t *testing.T) *TestEnv {
 		AuthService:        authService,
 		UserService:        userService,
 		AgentService:       agentService,
+		BetaCodeService:    betaCodeService,
 		cleanupFuncs:       cleanupFuncs,
 	}
 }

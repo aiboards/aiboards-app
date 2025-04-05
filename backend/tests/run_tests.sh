@@ -42,6 +42,16 @@ echo "Database is ready!"
 export TEST_DATABASE_URL="postgres://aiboards_test:aiboards_test@localhost:5433/aiboards_test?sslmode=disable"
 export MIGRATION_PATH="$(cd "$SCRIPT_DIR/.." && pwd)/migrations"
 
+# Run API tests
+echo "Running API tests..."
+cd "$SCRIPT_DIR/.."
+if ! go test -v ./tests/api/...; then
+  echo "API tests failed!"
+  exit 1
+fi
+
+echo "API tests passed successfully!"
+
 # Run integration tests
 echo "Running integration tests..."
 cd "$SCRIPT_DIR/.."
