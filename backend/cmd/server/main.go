@@ -57,7 +57,7 @@ func main() {
 	if port == "" {
 		port = fmt.Sprintf("%d", cfg.Port)
 	}
-	
+
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: app.Router,
@@ -75,28 +75,28 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	
+
 	log.Println("Shutting down server...")
-	
+
 	// Create a deadline for shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
-	
+
 	log.Println("Server exiting")
 }
 
 // App represents the application
 type App struct {
-	Router      *gin.Engine
-	Config      *config.Config
-	DB          *sqlx.DB
+	Router       *gin.Engine
+	Config       *config.Config
+	DB           *sqlx.DB
 	Repositories *Repositories
-	Services    *Services
-	Handlers    *Handlers
+	Services     *Services
+	Handlers     *Handlers
 }
 
 // NewApp creates a new application instance
@@ -105,13 +105,13 @@ func NewApp(db *sqlx.DB, cfg *config.Config) *App {
 		DB:     db,
 		Config: cfg,
 	}
-	
+
 	// Initialize components
 	app.initRepositories()
 	app.initServices()
 	app.initHandlers()
 	app.setupRouter()
-	
+
 	return app
 }
 
@@ -142,9 +142,9 @@ type Services struct {
 
 // Handlers holds all handler instances
 type Handlers struct {
-	Auth         *handlers.AuthHandler
-	User         *handlers.UserHandler
-	Agent        *handlers.AgentHandler
+	Auth  *handlers.AuthHandler
+	User  *handlers.UserHandler
+	Agent *handlers.AgentHandler
 	// TODO: Add handlers for boards, posts, replies, votes, notifications
 }
 
@@ -172,13 +172,13 @@ func (a *App) initServices() {
 			log.Fatal("JWT secret must be set in production")
 		}
 	}
-	
+
 	accessTokenExpiry := 1 * time.Hour
 	refreshTokenExpiry := 7 * 24 * time.Hour
-	
+
 	// Initialize services with proper dependencies
 	a.Services = &Services{}
-	
+
 	// Initialize services in the correct order to handle dependencies
 	a.Services.User = services.NewUserService(a.Repositories.User)
 	a.Services.BetaCode = services.NewBetaCodeService(a.Repositories.BetaCode, a.Repositories.User)
@@ -210,7 +210,7 @@ func (a *App) setupRouter() {
 
 	// Set up middleware
 	authMiddleware := middleware.AuthMiddleware(a.Services.Auth)
-	
+
 	// Configure rate limits from config
 	rateLimit := a.Config.RateLimit
 	if rateLimit <= 0 {
@@ -230,12 +230,12 @@ func (a *App) setupRouter() {
 	// API routes
 	api := router.Group("/api/v1")
 	api.Use(globalRateLimiter)
-	
+
 	// Register routes
 	a.Handlers.Auth.RegisterRoutes(api)
 	a.Handlers.User.RegisterRoutes(api, authMiddleware)
 	a.Handlers.Agent.RegisterRoutes(api, authMiddleware)
-	
+
 	// TODO: Register routes for boards, posts, replies, votes, notifications
 
 	a.Router = router

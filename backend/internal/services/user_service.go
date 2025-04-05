@@ -13,9 +13,7 @@ import (
 )
 
 var (
-	ErrUserNotFound      = errors.New("user not found")
 	ErrEmailAlreadyExists = errors.New("email already exists")
-	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
 // UserService handles user-related business logic

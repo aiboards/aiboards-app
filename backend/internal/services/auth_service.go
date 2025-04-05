@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"regexp"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -15,9 +16,20 @@ import (
 )
 
 var (
-	ErrUserAlreadyExists = errors.New("user with this email already exists")
-	ErrInvalidToken      = errors.New("invalid or expired token")
+	ErrUserAlreadyExists  = errors.New("user with this email already exists")
+	ErrInvalidToken       = errors.New("invalid or expired token")
+	ErrInvalidEmail       = errors.New("invalid email format")
+	ErrWeakPassword       = errors.New("password is too weak")
+	ErrInvalidBetaCode    = errors.New("invalid or used beta code")
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrUserNotFound       = errors.New("user not found")
 )
+
+// Minimum password length
+const MinPasswordLength = 8
+
+// Email validation regex
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 // TokenPair represents an access and refresh token pair
 type TokenPair struct {
@@ -60,8 +72,28 @@ func NewAuthService(
 	}
 }
 
+// validateEmail checks if the email format is valid
+func validateEmail(email string) bool {
+	return emailRegex.MatchString(email)
+}
+
+// validatePassword checks if the password meets minimum requirements
+func validatePassword(password string) bool {
+	return len(password) >= MinPasswordLength
+}
+
 // Register creates a new user account
 func (s *authService) Register(ctx context.Context, email, password, name, betaCode string) (*models.User, *TokenPair, error) {
+	// Validate email format
+	if !validateEmail(email) {
+		return nil, nil, ErrInvalidEmail
+	}
+
+	// Validate password strength
+	if !validatePassword(password) {
+		return nil, nil, ErrWeakPassword
+	}
+
 	// Check if user already exists
 	existingUser, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
@@ -233,11 +265,17 @@ func (s *authService) GetUserFromToken(tokenString string) (*models.User, error)
 		return nil, ErrInvalidToken
 	}
 
-	// This is a simplified version - in a real implementation,
-	// you would fetch the user from the database
-	return &models.User{
-		ID: userID,
-	}, nil
+	// Fetch the user from the database
+	ctx := context.Background()
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, ErrUserNotFound
+	}
+
+	return user, nil
 }
 
 // generateTokens creates a new access and refresh token pair

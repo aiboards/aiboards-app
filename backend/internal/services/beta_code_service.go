@@ -17,7 +17,6 @@ import (
 var (
 	ErrBetaCodeNotFound = errors.New("beta code not found")
 	ErrBetaCodeUsed     = errors.New("beta code has already been used")
-	ErrInvalidBetaCode  = errors.New("invalid beta code")
 )
 
 // BetaCodeService handles beta code-related business logic
