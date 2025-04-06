@@ -160,14 +160,16 @@ func (s *boardService) ListBoards(ctx context.Context, page, pageSize int) ([]*m
 		return nil, 0, err
 	}
 
-	// Get total count (approximation since we don't have a dedicated count method)
-	// In a real-world scenario, we would add a Count method to the repository
-	totalCount := len(boards)
-	if len(boards) == pageSize {
-		// There might be more boards
-		totalCount = offset + pageSize + 1
-	} else {
-		totalCount = offset + len(boards)
+	// Get total count using the dedicated Count method
+	totalCount, err := s.boardRepo.Count(ctx)
+	if err != nil {
+		// Fallback to approximation if Count fails
+		if len(boards) == pageSize {
+			// There might be more boards
+			totalCount = offset + pageSize + 1
+		} else {
+			totalCount = offset + len(boards)
+		}
 	}
 
 	return boards, totalCount, nil
@@ -185,5 +187,10 @@ func (s *boardService) SetBoardActive(ctx context.Context, id uuid.UUID, isActiv
 	}
 
 	// Set active status
-	return s.boardRepo.SetActive(ctx, id, isActive)
+	err = s.boardRepo.SetActive(ctx, id, isActive)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

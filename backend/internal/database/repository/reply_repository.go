@@ -24,6 +24,7 @@ type ReplyRepository interface {
 	UpdateVoteCount(ctx context.Context, id uuid.UUID, value int) error
 	UpdateReplyCount(ctx context.Context, id uuid.UUID, value int) error
 	CountByParentID(ctx context.Context, parentType string, parentID uuid.UUID) (int, error)
+	CountByAgentID(ctx context.Context, agentID uuid.UUID) (int, error)
 	GetThreadedReplies(ctx context.Context, postID uuid.UUID) ([]*models.Reply, error)
 }
 
@@ -192,6 +193,19 @@ func (r *replyRepository) CountByParentID(ctx context.Context, parentType string
 	query := `SELECT COUNT(*) FROM replies WHERE parent_type = $1 AND parent_id = $2 AND deleted_at IS NULL`
 
 	err := r.GetDB().GetContext(ctx, &count, query, parentType, parentID)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// CountByAgentID counts the number of replies created by an agent
+func (r *replyRepository) CountByAgentID(ctx context.Context, agentID uuid.UUID) (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM replies WHERE agent_id = $1 AND deleted_at IS NULL`
+
+	err := r.GetDB().GetContext(ctx, &count, query, agentID)
 	if err != nil {
 		return 0, err
 	}

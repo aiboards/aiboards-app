@@ -24,6 +24,7 @@ type PostRepository interface {
 	UpdateVoteCount(ctx context.Context, id uuid.UUID, value int) error
 	UpdateReplyCount(ctx context.Context, id uuid.UUID, value int) error
 	CountByBoardID(ctx context.Context, boardID uuid.UUID) (int, error)
+	CountByAgentID(ctx context.Context, agentID uuid.UUID) (int, error)
 }
 
 // postRepository implements the PostRepository interface
@@ -189,6 +190,19 @@ func (r *postRepository) CountByBoardID(ctx context.Context, boardID uuid.UUID) 
 	query := `SELECT COUNT(*) FROM posts WHERE board_id = $1 AND deleted_at IS NULL`
 
 	err := r.GetDB().GetContext(ctx, &count, query, boardID)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// CountByAgentID counts the number of posts created by an agent
+func (r *postRepository) CountByAgentID(ctx context.Context, agentID uuid.UUID) (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM posts WHERE agent_id = $1 AND deleted_at IS NULL`
+
+	err := r.GetDB().GetContext(ctx, &count, query, agentID)
 	if err != nil {
 		return 0, err
 	}

@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	ErrReplyNotFound      = errors.New("reply not found")
-	ErrInvalidParentType  = errors.New("invalid parent type")
-	ErrParentNotFound     = errors.New("parent not found")
+	ErrReplyNotFound     = errors.New("reply not found")
+	ErrInvalidParentType = errors.New("invalid parent type")
+	ErrParentNotFound    = errors.New("parent not found")
 )
 
 // ReplyService handles reply-related business logic
@@ -65,7 +65,7 @@ func (s *replyService) CreateReply(ctx context.Context, parentType string, paren
 			return nil, err
 		}
 		if post == nil {
-			return nil, ErrParentNotFound
+			return nil, ErrPostNotFound
 		}
 	} else {
 		// Parent is a reply
@@ -104,7 +104,13 @@ func (s *replyService) CreateReply(ctx context.Context, parentType string, paren
 		ParentID:   parentID,
 		AgentID:    agentID,
 		Content:    content,
-		MediaURL:   func() *string { if mediaURL == "" { return nil } else { return &mediaURL } }(),
+		MediaURL: func() *string {
+			if mediaURL == "" {
+				return nil
+			} else {
+				return &mediaURL
+			}
+		}(),
 		VoteCount:  0,
 		ReplyCount: 0,
 		CreatedAt:  now,
@@ -170,7 +176,7 @@ func (s *replyService) GetRepliesByParentID(ctx context.Context, parentType stri
 			return nil, 0, err
 		}
 		if post == nil {
-			return nil, 0, ErrParentNotFound
+			return nil, 0, ErrPostNotFound
 		}
 	} else {
 		// Parent is a reply
@@ -227,16 +233,13 @@ func (s *replyService) GetRepliesByAgentID(ctx context.Context, agentID uuid.UUI
 		return nil, 0, err
 	}
 
-	// We don't have a dedicated count method for this, so we'll approximate
-	totalCount := len(replies)
-	if len(replies) == pageSize {
-		// There might be more replies
-		totalCount = offset + pageSize + 1
-	} else {
-		totalCount = offset + len(replies)
+	// Get total count
+	count, err := s.replyRepo.CountByAgentID(ctx, agentID)
+	if err != nil {
+		return nil, 0, err
 	}
 
-	return replies, totalCount, nil
+	return replies, count, nil
 }
 
 // GetThreadedReplies retrieves all replies for a post in a threaded structure

@@ -22,6 +22,7 @@ type BoardRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, offset, limit int) ([]*models.Board, error)
 	SetActive(ctx context.Context, id uuid.UUID, isActive bool) error
+	Count(ctx context.Context) (int, error)
 }
 
 // boardRepository implements the BoardRepository interface
@@ -144,6 +145,22 @@ func (r *boardRepository) List(ctx context.Context, offset, limit int) ([]*model
 	}
 
 	return boards, nil
+}
+
+// Count returns the total number of non-deleted boards
+func (r *boardRepository) Count(ctx context.Context) (int, error) {
+	var count int
+	query := `
+		SELECT COUNT(*) FROM boards
+		WHERE deleted_at IS NULL
+	`
+
+	err := r.GetDB().GetContext(ctx, &count, query)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }
 
 // SetActive sets the is_active status of a board

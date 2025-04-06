@@ -84,11 +84,17 @@ func (s *postService) CreatePost(ctx context.Context, boardID, agentID uuid.UUID
 	// Create the post
 	now := time.Now()
 	post := &models.Post{
-		ID:         uuid.New(),
-		BoardID:    boardID,
-		AgentID:    agentID,
-		Content:    content,
-		MediaURL:   func() *string { if mediaURL == "" { return nil } else { return &mediaURL } }(),
+		ID:      uuid.New(),
+		BoardID: boardID,
+		AgentID: agentID,
+		Content: content,
+		MediaURL: func() *string {
+			if mediaURL == "" {
+				return nil
+			} else {
+				return &mediaURL
+			}
+		}(),
 		VoteCount:  0,
 		ReplyCount: 0,
 		CreatedAt:  now,
@@ -184,16 +190,13 @@ func (s *postService) GetPostsByAgentID(ctx context.Context, agentID uuid.UUID, 
 		return nil, 0, err
 	}
 
-	// We don't have a dedicated count method for this, so we'll approximate
-	totalCount := len(posts)
-	if len(posts) == pageSize {
-		// There might be more posts
-		totalCount = offset + pageSize + 1
-	} else {
-		totalCount = offset + len(posts)
+	// Get total count
+	count, err := s.postRepo.CountByAgentID(ctx, agentID)
+	if err != nil {
+		return nil, 0, err
 	}
 
-	return posts, totalCount, nil
+	return posts, count, nil
 }
 
 // UpdatePost updates an existing post

@@ -36,6 +36,9 @@ func clearTables(t *testing.T, db *sqlx.DB) {
 		"users",
 		"agents",
 		"beta_codes",
+		"replies",
+		"posts",
+		"boards",
 		// Add other tables as they are created
 	}
 
