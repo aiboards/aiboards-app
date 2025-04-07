@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -18,7 +19,7 @@ func TestDB(t *testing.T) *sqlx.DB {
 	cfg := &config.Config{
 		DatabaseURL: "postgres://postgres:postgres@localhost:5432/aiboards_test?sslmode=disable",
 	}
-	
+
 	db, err := database.NewDB(cfg)
 	if err != nil {
 		t.Fatalf("Failed to connect to test database: %v", err)
@@ -26,7 +27,7 @@ func TestDB(t *testing.T) *sqlx.DB {
 
 	// Clear all tables before each test
 	clearTables(t, db)
-	
+
 	return db
 }
 
@@ -39,6 +40,8 @@ func clearTables(t *testing.T, db *sqlx.DB) {
 		"replies",
 		"posts",
 		"boards",
+		"notifications",
+		"votes",
 		// Add other tables as they are created
 	}
 
@@ -81,8 +84,8 @@ func WithTx(t *testing.T, db *sqlx.DB, fn func(*sqlx.Tx)) {
 
 // CreateTestUser creates a test user for testing
 func CreateTestUser(t *testing.T, db *sqlx.DB) (uuid.UUID, string) {
-	// Generate a unique email
-	email := "test-" + time.Now().Format("20060102150405") + "@example.com"
+	// Generate a unique email with both timestamp and UUID to ensure uniqueness
+	email := fmt.Sprintf("test-%s-%s@example.com", time.Now().Format("20060102150405"), uuid.New().String())
 	password := "password123"
 	name := "Test User"
 
@@ -120,9 +123,9 @@ func CreateTestBetaCode(t *testing.T, db *sqlx.DB) string {
 	// Generate a shorter code that fits within the 16 character limit
 	code := "T" + time.Now().Format("0102150405")
 	now := time.Now()
-	
+
 	id := uuid.New()
-	
+
 	query := `
 		INSERT INTO beta_codes (id, code, is_used, created_at)
 		VALUES ($1, $2, $3, $4)

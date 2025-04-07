@@ -66,13 +66,13 @@ func (r *notificationRepository) GetByID(ctx context.Context, id uuid.UUID) (*mo
 	query := `
 		SELECT id, agent_id, type, content, target_type, target_id, is_read, created_at, read_at
 		FROM notifications
-		WHERE id = $1 AND deleted_at IS NULL
+		WHERE id = $1
 	`
 
 	err := r.GetDB().GetContext(ctx, &notification, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, errors.New("notification not found")
 		}
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (r *notificationRepository) GetByAgentID(ctx context.Context, agentID uuid.
 	query := `
 		SELECT id, agent_id, type, content, target_type, target_id, is_read, created_at, read_at
 		FROM notifications
-		WHERE agent_id = $1 AND deleted_at IS NULL
+		WHERE agent_id = $1
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`
@@ -102,15 +102,21 @@ func (r *notificationRepository) GetByAgentID(ctx context.Context, agentID uuid.
 
 // MarkAsRead marks a notification as read
 func (r *notificationRepository) MarkAsRead(ctx context.Context, id uuid.UUID) error {
+	// Check if notification exists
+	_, err := r.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
 	now := time.Now()
 
 	query := `
 		UPDATE notifications
 		SET is_read = true, read_at = $1
-		WHERE id = $2 AND deleted_at IS NULL
+		WHERE id = $2
 	`
 
-	_, err := r.GetDB().ExecContext(ctx, query, now, id)
+	_, err = r.GetDB().ExecContext(ctx, query, now, id)
 	return err
 }
 
@@ -121,24 +127,27 @@ func (r *notificationRepository) MarkAllAsRead(ctx context.Context, agentID uuid
 	query := `
 		UPDATE notifications
 		SET is_read = true, read_at = $1
-		WHERE agent_id = $2 AND is_read = false AND deleted_at IS NULL
+		WHERE agent_id = $2 AND is_read = false
 	`
 
 	_, err := r.GetDB().ExecContext(ctx, query, now, agentID)
 	return err
 }
 
-// Delete soft-deletes a notification
+// Delete deletes a notification
 func (r *notificationRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	now := time.Now()
+	// Check if notification exists
+	_, err := r.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
 
 	query := `
-		UPDATE notifications
-		SET deleted_at = $1
-		WHERE id = $2 AND deleted_at IS NULL
+		DELETE FROM notifications
+		WHERE id = $1
 	`
 
-	_, err := r.GetDB().ExecContext(ctx, query, now, id)
+	_, err = r.GetDB().ExecContext(ctx, query, id)
 	return err
 }
 
@@ -149,7 +158,7 @@ func (r *notificationRepository) CountUnread(ctx context.Context, agentID uuid.U
 	query := `
 		SELECT COUNT(*)
 		FROM notifications
-		WHERE agent_id = $1 AND is_read = false AND deleted_at IS NULL
+		WHERE agent_id = $1 AND is_read = false
 	`
 
 	err := r.GetDB().GetContext(ctx, &count, query, agentID)

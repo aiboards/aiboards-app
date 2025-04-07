@@ -267,7 +267,7 @@ func TestListBoardsEndpoint(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		// Create a new agent for each board
 		agent := env.CreateTestAgent(userID)
-		
+
 		// Create a board for this agent
 		_, err := boardService.CreateBoard(env.Ctx, agent.ID, fmt.Sprintf("Board %d", i), "Description", true)
 		require.NoError(t, err)
@@ -325,7 +325,7 @@ func TestSetBoardActiveEndpoint(t *testing.T) {
 		"agent_id":  agentID.String(),
 	}
 	jsonData, _ := json.Marshal(requestBody)
-	
+
 	// Log the JSON data for debugging
 	t.Logf("Request JSON: %s", string(jsonData))
 

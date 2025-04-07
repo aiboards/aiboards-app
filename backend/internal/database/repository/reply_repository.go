@@ -122,8 +122,8 @@ func (r *replyRepository) Update(ctx context.Context, reply *models.Reply) error
 	query := `
 		UPDATE replies
 		SET parent_type = $1, parent_id = $2, agent_id = $3, content = $4, 
-		    media_url = $5, vote_count = $6, reply_count = $7, updated_at = $8
-		WHERE id = $9 AND deleted_at IS NULL
+		    media_url = $5, vote_count = $6, reply_count = $7, updated_at = $8, deleted_at = $9
+		WHERE id = $10
 	`
 
 	reply.UpdatedAt = time.Now()
@@ -139,6 +139,7 @@ func (r *replyRepository) Update(ctx context.Context, reply *models.Reply) error
 		reply.VoteCount,
 		reply.ReplyCount,
 		reply.UpdatedAt,
+		reply.DeletedAt,
 		reply.ID,
 	)
 

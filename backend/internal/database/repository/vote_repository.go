@@ -18,7 +18,7 @@ type VoteRepository interface {
 	Create(ctx context.Context, vote *models.Vote) error
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Vote, error)
 	GetByAgentAndTarget(ctx context.Context, agentID uuid.UUID, targetType string, targetID uuid.UUID) (*models.Vote, error)
-	GetByTargetID(ctx context.Context, targetType string, targetID uuid.UUID, offset, limit int) ([]*models.Vote, error)
+	GetByTargetID(ctx context.Context, targetType string, targetID uuid.UUID, offset, limit int) ([]*models.Vote, int, error)
 	Update(ctx context.Context, vote *models.Vote) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	CountByTargetID(ctx context.Context, targetType string, targetID uuid.UUID) (int, error)
@@ -61,7 +61,7 @@ func (r *voteRepository) Create(ctx context.Context, vote *models.Vote) error {
 // GetByID retrieves a vote by ID
 func (r *voteRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Vote, error) {
 	var vote models.Vote
-	query := `SELECT * FROM votes WHERE id = $1 AND deleted_at IS NULL`
+	query := `SELECT * FROM votes WHERE id = $1`
 
 	err := r.GetDB().GetContext(ctx, &vote, query, id)
 	if err != nil {
@@ -77,10 +77,7 @@ func (r *voteRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Vot
 // GetByAgentAndTarget retrieves a vote by agent ID and target
 func (r *voteRepository) GetByAgentAndTarget(ctx context.Context, agentID uuid.UUID, targetType string, targetID uuid.UUID) (*models.Vote, error) {
 	var vote models.Vote
-	query := `
-		SELECT * FROM votes 
-		WHERE agent_id = $1 AND target_type = $2 AND target_id = $3 AND deleted_at IS NULL
-	`
+	query := `SELECT * FROM votes WHERE agent_id = $1 AND target_type = $2 AND target_id = $3`
 
 	err := r.GetDB().GetContext(ctx, &vote, query, agentID, targetType, targetID)
 	if err != nil {
@@ -94,21 +91,32 @@ func (r *voteRepository) GetByAgentAndTarget(ctx context.Context, agentID uuid.U
 }
 
 // GetByTargetID retrieves votes for a target with pagination
-func (r *voteRepository) GetByTargetID(ctx context.Context, targetType string, targetID uuid.UUID, offset, limit int) ([]*models.Vote, error) {
+func (r *voteRepository) GetByTargetID(ctx context.Context, targetType string, targetID uuid.UUID, offset, limit int) ([]*models.Vote, int, error) {
 	votes := []*models.Vote{}
 	query := `
 		SELECT * FROM votes
-		WHERE target_type = $1 AND target_id = $2 AND deleted_at IS NULL
+		WHERE target_type = $1 AND target_id = $2
 		ORDER BY created_at DESC
 		LIMIT $3 OFFSET $4
 	`
 
 	err := r.GetDB().SelectContext(ctx, &votes, query, targetType, targetID, limit, offset)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return votes, nil
+	var count int
+	countQuery := `
+		SELECT COUNT(*) FROM votes 
+		WHERE target_type = $1 AND target_id = $2
+	`
+
+	err = r.GetDB().GetContext(ctx, &count, countQuery, targetType, targetID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return votes, count, nil
 }
 
 // Update updates an existing vote
@@ -116,7 +124,7 @@ func (r *voteRepository) Update(ctx context.Context, vote *models.Vote) error {
 	query := `
 		UPDATE votes
 		SET agent_id = $1, target_type = $2, target_id = $3, value = $4, updated_at = $5
-		WHERE id = $6 AND deleted_at IS NULL
+		WHERE id = $6
 	`
 
 	vote.UpdatedAt = time.Now()
@@ -135,17 +143,10 @@ func (r *voteRepository) Update(ctx context.Context, vote *models.Vote) error {
 	return err
 }
 
-// Delete soft-deletes a vote
+// Delete removes a vote from the database
 func (r *voteRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	query := `
-		UPDATE votes
-		SET deleted_at = $1, updated_at = $1
-		WHERE id = $2 AND deleted_at IS NULL
-	`
-
-	now := time.Now()
-
-	_, err := r.GetDB().ExecContext(ctx, query, now, id)
+	query := `DELETE FROM votes WHERE id = $1`
+	_, err := r.GetDB().ExecContext(ctx, query, id)
 	return err
 }
 
@@ -153,8 +154,8 @@ func (r *voteRepository) Delete(ctx context.Context, id uuid.UUID) error {
 func (r *voteRepository) CountByTargetID(ctx context.Context, targetType string, targetID uuid.UUID) (int, error) {
 	var count int
 	query := `
-		SELECT SUM(value) FROM votes 
-		WHERE target_type = $1 AND target_id = $2 AND deleted_at IS NULL
+		SELECT COUNT(*) FROM votes 
+		WHERE target_type = $1 AND target_id = $2
 	`
 
 	err := r.GetDB().GetContext(ctx, &count, query, targetType, targetID)

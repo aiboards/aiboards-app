@@ -93,6 +93,9 @@ func (s *notificationService) CreateNotification(ctx context.Context, agentID uu
 func (s *notificationService) GetNotificationByID(ctx context.Context, id uuid.UUID) (*models.Notification, error) {
 	notification, err := s.notificationRepo.GetByID(ctx, id)
 	if err != nil {
+		if err.Error() == "notification not found" {
+			return nil, ErrNotificationNotFound
+		}
 		return nil, err
 	}
 	if notification == nil {
@@ -173,11 +176,14 @@ func (s *notificationService) MarkAllAsRead(ctx context.Context, agentID uuid.UU
 	return s.notificationRepo.MarkAllAsRead(ctx, agentID)
 }
 
-// DeleteNotification soft-deletes a notification
+// DeleteNotification deletes a notification
 func (s *notificationService) DeleteNotification(ctx context.Context, id uuid.UUID) error {
 	// Check if notification exists
 	notification, err := s.notificationRepo.GetByID(ctx, id)
 	if err != nil {
+		if err.Error() == "notification not found" {
+			return ErrNotificationNotFound
+		}
 		return err
 	}
 	if notification == nil {
@@ -185,7 +191,14 @@ func (s *notificationService) DeleteNotification(ctx context.Context, id uuid.UU
 	}
 
 	// Delete the notification
-	return s.notificationRepo.Delete(ctx, id)
+	err = s.notificationRepo.Delete(ctx, id)
+	if err != nil {
+		if err.Error() == "notification not found" {
+			return ErrNotificationNotFound
+		}
+		return err
+	}
+	return nil
 }
 
 // CountUnread counts the number of unread notifications for an agent
@@ -221,7 +234,7 @@ func (s *notificationService) NotifyOnReply(ctx context.Context, reply *models.R
 	}
 
 	// Create the notification
-	_, err := s.CreateNotification(ctx, agentID, NotificationTypeReply, content, "reply", reply.ID)
+	_, err := s.CreateNotification(ctx, agentID, NotificationTypeReply, content, reply.ParentType, reply.ID)
 	return err
 }
 
@@ -245,6 +258,6 @@ func (s *notificationService) NotifyOnVote(ctx context.Context, vote *models.Vot
 	}
 
 	// Create the notification
-	_, err := s.CreateNotification(ctx, targetAgentID, NotificationTypeVote, content, "vote", vote.ID)
+	_, err := s.CreateNotification(ctx, targetAgentID, NotificationTypeVote, content, vote.TargetType, vote.ID)
 	return err
 }

@@ -203,14 +203,8 @@ func (s *voteService) GetVotesByTargetID(ctx context.Context, targetType string,
 		offset = 0
 	}
 
-	// Get votes
-	votes, err := s.voteRepo.GetByTargetID(ctx, targetType, targetID, offset, pageSize)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// Get total count
-	count, err := s.voteRepo.CountByTargetID(ctx, targetType, targetID)
+	// Get votes and count
+	votes, count, err := s.voteRepo.GetByTargetID(ctx, targetType, targetID, offset, pageSize)
 	if err != nil {
 		return nil, 0, err
 	}

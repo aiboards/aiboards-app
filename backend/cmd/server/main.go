@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 
 	"github.com/garrettallen/aiboards/backend/config"
 	"github.com/garrettallen/aiboards/backend/internal/database"
@@ -97,13 +98,21 @@ type App struct {
 	Repositories *Repositories
 	Services     *Services
 	Handlers     *Handlers
+	UploadDir    string
 }
 
 // NewApp creates a new application instance
 func NewApp(db *sqlx.DB, cfg *config.Config) *App {
+	// Set up upload directory
+	uploadDir := filepath.Join(".", "uploads")
+	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
+		os.MkdirAll(uploadDir, 0755)
+	}
+
 	app := &App{
-		DB:     db,
-		Config: cfg,
+		DB:        db,
+		Config:    cfg,
+		UploadDir: uploadDir,
 	}
 
 	// Initialize components
@@ -142,11 +151,17 @@ type Services struct {
 
 // Handlers holds all handler instances
 type Handlers struct {
-	Auth     *handlers.AuthHandler
-	User     *handlers.UserHandler
-	Agent    *handlers.AgentHandler
-	BetaCode *handlers.BetaCodeHandler
-	// TODO: Add handlers for boards, posts, replies, votes, notifications
+	Auth         *handlers.AuthHandler
+	User         *handlers.UserHandler
+	Agent        *handlers.AgentHandler
+	BetaCode     *handlers.BetaCodeHandler
+	Board        *handlers.BoardHandler
+	Post         *handlers.PostHandler
+	Reply        *handlers.ReplyHandler
+	Vote         *handlers.VoteHandler
+	Notification *handlers.NotificationHandler
+	Media        *handlers.MediaHandler
+	Admin        *handlers.AdminHandler
 }
 
 // initRepositories initializes all repositories
@@ -195,23 +210,30 @@ func (a *App) initServices() {
 // initHandlers initializes all handlers
 func (a *App) initHandlers() {
 	a.Handlers = &Handlers{
-		Auth:     handlers.NewAuthHandler(a.Services.Auth),
-		User:     handlers.NewUserHandler(a.Services.User, a.Services.Auth),
-		Agent:    handlers.NewAgentHandler(a.Services.Agent),
-		BetaCode: handlers.NewBetaCodeHandler(a.Services.BetaCode),
-		// TODO: Add handlers for boards, posts, replies, votes, notifications
+		Auth:         handlers.NewAuthHandler(a.Services.Auth),
+		User:         handlers.NewUserHandler(a.Services.User, a.Services.Auth),
+		Agent:        handlers.NewAgentHandler(a.Services.Agent),
+		BetaCode:     handlers.NewBetaCodeHandler(a.Services.BetaCode),
+		Board:        handlers.NewBoardHandler(a.Services.Board),
+		Post:         handlers.NewPostHandler(a.Services.Post),
+		Reply:        handlers.NewReplyHandler(a.Services.Reply),
+		Vote:         handlers.NewVoteHandler(a.Services.Vote),
+		Notification: handlers.NewNotificationHandler(a.Services.Notification),
+		Media:        handlers.NewMediaHandler(a.UploadDir),
+		Admin:        handlers.NewAdminHandler(a.Services.User, a.Services.Agent, a.Services.Board, a.Services.Post, a.Services.Reply),
 	}
 }
 
-// setupRouter configures the HTTP router
+// setupRouter sets up the HTTP router
 func (a *App) setupRouter() {
 	router := gin.Default()
 
 	// Set up CORS
 	router.Use(middleware.CORS())
 
-	// Set up middleware
+	// Create middleware
 	authMiddleware := middleware.AuthMiddleware(a.Services.Auth)
+	adminMiddleware := middleware.AdminMiddleware(a.Services.User)
 
 	// Configure rate limits from config
 	rateLimit := a.Config.RateLimit
@@ -238,8 +260,13 @@ func (a *App) setupRouter() {
 	a.Handlers.User.RegisterRoutes(api, authMiddleware)
 	a.Handlers.Agent.RegisterRoutes(api, authMiddleware)
 	a.Handlers.BetaCode.RegisterRoutes(api, authMiddleware)
-
-	// TODO: Register routes for boards, posts, replies, votes, notifications
+	a.Handlers.Board.RegisterRoutes(api, authMiddleware)
+	a.Handlers.Post.RegisterRoutes(api, authMiddleware)
+	a.Handlers.Reply.RegisterRoutes(api, authMiddleware)
+	a.Handlers.Vote.RegisterRoutes(api, authMiddleware)
+	a.Handlers.Notification.RegisterRoutes(api, authMiddleware)
+	a.Handlers.Media.RegisterRoutes(api, authMiddleware)
+	a.Handlers.Admin.RegisterRoutes(api, authMiddleware, adminMiddleware)
 
 	a.Router = router
 }

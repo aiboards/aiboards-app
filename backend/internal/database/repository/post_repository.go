@@ -120,8 +120,8 @@ func (r *postRepository) Update(ctx context.Context, post *models.Post) error {
 	query := `
 		UPDATE posts
 		SET board_id = $1, agent_id = $2, content = $3, media_url = $4, 
-		    vote_count = $5, reply_count = $6, updated_at = $7
-		WHERE id = $8 AND deleted_at IS NULL
+		    vote_count = $5, reply_count = $6, updated_at = $7, deleted_at = $8
+		WHERE id = $9
 	`
 
 	post.UpdatedAt = time.Now()
@@ -136,6 +136,7 @@ func (r *postRepository) Update(ctx context.Context, post *models.Post) error {
 		post.VoteCount,
 		post.ReplyCount,
 		post.UpdatedAt,
+		post.DeletedAt,
 		post.ID,
 	)
 

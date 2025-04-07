@@ -26,6 +26,7 @@ type UserService interface {
 	ListUsers(ctx context.Context, page, pageSize int) ([]*models.User, int, error)
 	Authenticate(ctx context.Context, email, password string) (*models.User, error)
 	ChangePassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error
+	GetUsers(ctx context.Context, page, pageSize int) ([]*models.User, int, error)
 }
 
 type userService struct {
@@ -213,4 +214,27 @@ func (s *userService) ChangePassword(ctx context.Context, userID uuid.UUID, curr
 	user.PasswordHash = string(hashedPassword)
 	user.UpdatedAt = time.Now()
 	return s.userRepo.Update(ctx, user)
+}
+
+// GetUsers retrieves a paginated list of users
+func (s *userService) GetUsers(ctx context.Context, page, pageSize int) ([]*models.User, int, error) {
+	// Calculate offset
+	offset := (page - 1) * pageSize
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Get users
+	users, err := s.userRepo.List(ctx, offset, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get total count
+	count, err := s.userRepo.Count(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return users, count, nil
 }

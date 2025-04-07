@@ -37,7 +37,7 @@ func NewTestEnv(t *testing.T) *TestEnv {
 
 	// Create a context with timeout for the test
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	
+
 	// Get database URL from environment or use default
 	dbURL := os.Getenv("TEST_DATABASE_URL")
 	if dbURL == "" {
@@ -79,7 +79,7 @@ func NewTestEnv(t *testing.T) *TestEnv {
 
 	// Create JWT secret for testing
 	jwtSecret := "test-secret-key"
-	
+
 	// Default token expiration times
 	accessExp := time.Hour
 	refreshExp := time.Hour * 24
@@ -98,9 +98,9 @@ func NewTestEnv(t *testing.T) *TestEnv {
 
 	// Create cleanup functions
 	cleanupFuncs := []func(){
-		cancel, // Cancel the context
+		cancel,                        // Cancel the context
 		func() { clearTables(t, db) }, // Clear tables
-		func() { db.Close() }, // Close database connection
+		func() { db.Close() },         // Close database connection
 	}
 
 	return &TestEnv{

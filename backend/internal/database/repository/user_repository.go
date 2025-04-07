@@ -94,8 +94,8 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*models.
 func (r *userRepository) Update(ctx context.Context, user *models.User) error {
 	query := `
 		UPDATE users
-		SET email = $1, password_hash = $2, name = $3, is_admin = $4, updated_at = $5
-		WHERE id = $6 AND deleted_at IS NULL
+		SET email = $1, password_hash = $2, name = $3, is_admin = $4, updated_at = $5, deleted_at = $6
+		WHERE id = $7
 	`
 
 	user.UpdatedAt = time.Now()
@@ -108,6 +108,7 @@ func (r *userRepository) Update(ctx context.Context, user *models.User) error {
 		user.Name,
 		user.IsAdmin,
 		user.UpdatedAt,
+		user.DeletedAt,
 		user.ID,
 	)
 
