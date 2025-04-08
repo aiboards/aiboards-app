@@ -200,4 +200,78 @@ func TestPostService(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, services.ErrBoardInactive, err)
 	})
+	
+	t.Run("SearchPosts", func(t *testing.T) {
+		// Create a new board for search testing
+		searchBoard, err := boardService.CreateBoard(env.Ctx, agentID, "Search Test Board", "For testing search", true)
+		require.NoError(t, err)
+		
+		// Explicitly set the board to active to ensure it overrides any default values
+		err = boardService.SetBoardActive(env.Ctx, searchBoard.ID, true)
+		require.NoError(t, err)
+		
+		// Verify the board is actually active by retrieving it
+		board, err := boardService.GetBoardByID(env.Ctx, searchBoard.ID)
+		require.NoError(t, err)
+		require.NotNil(t, board)
+		require.True(t, board.IsActive, "Board should be active")
+		
+		// Create posts with different content for search testing
+		_, err = postService.CreatePost(env.Ctx, searchBoard.ID, agentID, "This is a post about AI and machine learning", "")
+		require.NoError(t, err)
+		
+		_, err = postService.CreatePost(env.Ctx, searchBoard.ID, agentID, "Discussion about natural language processing", "")
+		require.NoError(t, err)
+		
+		_, err = postService.CreatePost(env.Ctx, searchBoard.ID, agentID, "AI ethics and responsible development", "")
+		require.NoError(t, err)
+		
+		_, err = postService.CreatePost(env.Ctx, searchBoard.ID, agentID, "Software engineering best practices", "")
+		require.NoError(t, err)
+		
+		_, err = postService.CreatePost(env.Ctx, searchBoard.ID, agentID, "Another AI-related discussion", "")
+		require.NoError(t, err)
+		
+		// Test search for "AI"
+		posts, count, err := postService.SearchPosts(env.Ctx, searchBoard.ID, "AI", 1, 10)
+		require.NoError(t, err)
+		assert.Equal(t, 3, count)
+		assert.Len(t, posts, 3)
+		
+		// Test search for "language"
+		posts, count, err = postService.SearchPosts(env.Ctx, searchBoard.ID, "language", 1, 10)
+		require.NoError(t, err)
+		assert.Equal(t, 1, count)
+		assert.Len(t, posts, 1)
+		
+		// Test search for "software"
+		posts, count, err = postService.SearchPosts(env.Ctx, searchBoard.ID, "software", 1, 10)
+		require.NoError(t, err)
+		assert.Equal(t, 1, count)
+		assert.Len(t, posts, 1)
+		
+		// Test search with no matches
+		posts, count, err = postService.SearchPosts(env.Ctx, searchBoard.ID, "nonexistent", 1, 10)
+		require.NoError(t, err)
+		assert.Equal(t, 0, count)
+		assert.Len(t, posts, 0)
+		
+		// Test search with pagination
+		_, err = postService.CreatePost(env.Ctx, searchBoard.ID, agentID, "More AI content for pagination test", "")
+		require.NoError(t, err)
+		
+		posts, count, err = postService.SearchPosts(env.Ctx, searchBoard.ID, "AI", 1, 2)
+		require.NoError(t, err)
+		assert.Equal(t, 4, count)
+		assert.Len(t, posts, 2)
+		
+		// Get second page
+		morePosts, count, err := postService.SearchPosts(env.Ctx, searchBoard.ID, "AI", 2, 2)
+		require.NoError(t, err)
+		assert.Equal(t, 4, count)
+		assert.Len(t, morePosts, 2)
+		
+		// Ensure different posts on different pages
+		assert.NotEqual(t, posts[0].ID, morePosts[0].ID)
+	})
 }

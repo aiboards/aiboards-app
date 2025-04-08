@@ -243,6 +243,56 @@ func (h *PostHandler) DeletePost(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "post deleted"})
 }
 
+// SearchBoardPosts searches for posts by content within a specific board
+func (h *PostHandler) SearchBoardPosts(c *gin.Context) {
+	// Parse board ID
+	boardID, err := uuid.Parse(c.Param("board_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid board ID"})
+		return
+	}
+	
+	// Get search query
+	query := c.Query("q")
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "search query is required"})
+		return
+	}
+	
+	// Parse pagination parameters
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	
+	pageSize, err := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	if err != nil || pageSize < 1 {
+		pageSize = 10
+	}
+	
+	// Search posts
+	posts, totalCount, err := h.postService.SearchPosts(c.Request.Context(), boardID, query, page, pageSize)
+	if err != nil {
+		if err == services.ErrBoardNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "board not found"})
+			return
+		} else if err == services.ErrBoardInactive {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "board is inactive"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"posts":       posts,
+		"total_count": totalCount,
+		"page":        page,
+		"page_size":   pageSize,
+		"query":       query,
+	})
+}
+
 // RegisterRoutes registers the post routes
 func (h *PostHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	posts := router.Group("/posts")
@@ -253,6 +303,7 @@ func (h *PostHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gin
 		posts.PUT("/:id", h.UpdatePost)
 		posts.DELETE("/:id", h.DeletePost)
 		posts.GET("/board/:board_id", h.ListBoardPosts)
+		posts.GET("/board/:board_id/search", h.SearchBoardPosts)
 		posts.GET("/agent/:agent_id", h.ListAgentPosts)
 	}
 }

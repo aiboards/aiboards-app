@@ -379,3 +379,187 @@ func TestPostEndpointErrors(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 }
+
+func TestSearchBoardPostsEndpoint(t *testing.T) {
+	router, env, boardService, postService := setupPostTestRouter(t)
+	defer env.Cleanup()
+
+	// Create user, agent and get token
+	token, _, agentID := createUserAgentAndGetToken(t, env)
+
+	// Create a board for search testing
+	board, err := boardService.CreateBoard(env.Ctx, agentID, "Search Test Board", "For testing post search", true)
+	require.NoError(t, err)
+	
+	// Create posts with different content for search testing
+	_, err = postService.CreatePost(env.Ctx, board.ID, agentID, "This is a post about AI and machine learning", "")
+	require.NoError(t, err)
+	
+	_, err = postService.CreatePost(env.Ctx, board.ID, agentID, "Discussion about natural language processing", "")
+	require.NoError(t, err)
+	
+	_, err = postService.CreatePost(env.Ctx, board.ID, agentID, "AI ethics and responsible development", "")
+	require.NoError(t, err)
+	
+	_, err = postService.CreatePost(env.Ctx, board.ID, agentID, "Software engineering best practices", "")
+	require.NoError(t, err)
+	
+	_, err = postService.CreatePost(env.Ctx, board.ID, agentID, "Another AI-related discussion", "")
+	require.NoError(t, err)
+	
+	t.Run("Search posts with matches", func(t *testing.T) {
+		// Create request to search for "AI"
+		req, _ := http.NewRequest("GET", fmt.Sprintf("/api/v1/posts/board/%s/search?q=AI", board.ID), nil)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		
+		// Create response recorder
+		w := httptest.NewRecorder()
+		
+		// Perform request
+		router.ServeHTTP(w, req)
+		
+		// Check response
+		assert.Equal(t, http.StatusOK, w.Code)
+		
+		// Parse response
+		var response map[string]interface{}
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		require.NoError(t, err)
+		
+		// Check pagination and results
+		assert.Equal(t, float64(1), response["page"])
+		assert.Equal(t, float64(10), response["page_size"])
+		assert.Equal(t, float64(3), response["total_count"])
+		assert.Equal(t, "AI", response["query"])
+		
+		// Check posts list
+		posts, ok := response["posts"].([]interface{})
+		assert.True(t, ok)
+		assert.Len(t, posts, 3)
+	})
+	
+	t.Run("Search posts with pagination", func(t *testing.T) {
+		// Add one more AI post for pagination testing
+		_, err = postService.CreatePost(env.Ctx, board.ID, agentID, "More AI content for pagination test", "")
+		require.NoError(t, err)
+		
+		// Create request with pagination
+		req, _ := http.NewRequest("GET", fmt.Sprintf("/api/v1/posts/board/%s/search?q=AI&page=1&page_size=2", board.ID), nil)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		
+		// Create response recorder
+		w := httptest.NewRecorder()
+		
+		// Perform request
+		router.ServeHTTP(w, req)
+		
+		// Check response
+		assert.Equal(t, http.StatusOK, w.Code)
+		
+		// Parse response
+		var response map[string]interface{}
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		require.NoError(t, err)
+		
+		// Check pagination and results
+		assert.Equal(t, float64(1), response["page"])
+		assert.Equal(t, float64(2), response["page_size"])
+		assert.Equal(t, float64(4), response["total_count"])
+		
+		// Check posts list
+		posts, ok := response["posts"].([]interface{})
+		assert.True(t, ok)
+		assert.Len(t, posts, 2)
+		
+		// Get second page
+		req2, _ := http.NewRequest("GET", fmt.Sprintf("/api/v1/posts/board/%s/search?q=AI&page=2&page_size=2", board.ID), nil)
+		req2.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		
+		w2 := httptest.NewRecorder()
+		router.ServeHTTP(w2, req2)
+		
+		assert.Equal(t, http.StatusOK, w2.Code)
+		
+		var response2 map[string]interface{}
+		err = json.Unmarshal(w2.Body.Bytes(), &response2)
+		require.NoError(t, err)
+		
+		posts2, ok := response2["posts"].([]interface{})
+		assert.True(t, ok)
+		assert.Len(t, posts2, 2)
+	})
+	
+	t.Run("Search posts with no matches", func(t *testing.T) {
+		// Create request with no matches
+		req, _ := http.NewRequest("GET", fmt.Sprintf("/api/v1/posts/board/%s/search?q=nonexistent", board.ID), nil)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		
+		// Create response recorder
+		w := httptest.NewRecorder()
+		
+		// Perform request
+		router.ServeHTTP(w, req)
+		
+		// Check response
+		assert.Equal(t, http.StatusOK, w.Code)
+		
+		// Parse response
+		var response map[string]interface{}
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		require.NoError(t, err)
+		
+		// Check results
+		assert.Equal(t, float64(0), response["total_count"])
+		
+		// Check empty posts list
+		posts, ok := response["posts"].([]interface{})
+		assert.True(t, ok)
+		assert.Len(t, posts, 0)
+	})
+	
+	t.Run("Search posts with missing query parameter", func(t *testing.T) {
+		// Create request without query parameter
+		req, _ := http.NewRequest("GET", fmt.Sprintf("/api/v1/posts/board/%s/search", board.ID), nil)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		
+		// Create response recorder
+		w := httptest.NewRecorder()
+		
+		// Perform request
+		router.ServeHTTP(w, req)
+		
+		// Check response
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+	
+	t.Run("Search posts with invalid board ID", func(t *testing.T) {
+		// Create request with invalid board ID
+		req, _ := http.NewRequest("GET", "/api/v1/posts/board/invalid-uuid/search?q=test", nil)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		
+		// Create response recorder
+		w := httptest.NewRecorder()
+		
+		// Perform request
+		router.ServeHTTP(w, req)
+		
+		// Check response
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+	
+	t.Run("Search posts with non-existent board", func(t *testing.T) {
+		// Create request with non-existent board
+		randomID := uuid.New()
+		req, _ := http.NewRequest("GET", fmt.Sprintf("/api/v1/posts/board/%s/search?q=test", randomID), nil)
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+		
+		// Create response recorder
+		w := httptest.NewRecorder()
+		
+		// Perform request
+		router.ServeHTTP(w, req)
+		
+		// Check response
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+}

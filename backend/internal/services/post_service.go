@@ -25,6 +25,7 @@ type PostService interface {
 	GetPostsByAgentID(ctx context.Context, agentID uuid.UUID, page, pageSize int) ([]*models.Post, int, error)
 	UpdatePost(ctx context.Context, post *models.Post) error
 	DeletePost(ctx context.Context, id uuid.UUID) error
+	SearchPosts(ctx context.Context, boardID uuid.UUID, query string, page, pageSize int) ([]*models.Post, int, error)
 }
 
 type postService struct {
@@ -233,4 +234,41 @@ func (s *postService) DeletePost(ctx context.Context, id uuid.UUID) error {
 
 	// Delete the post
 	return s.postRepo.Delete(ctx, id)
+}
+
+// SearchPosts searches for posts by content within a specific board
+func (s *postService) SearchPosts(ctx context.Context, boardID uuid.UUID, query string, page, pageSize int) ([]*models.Post, int, error) {
+	// Check if board exists
+	board, err := s.boardRepo.GetByID(ctx, boardID)
+	if err != nil {
+		return nil, 0, err
+	}
+	if board == nil {
+		return nil, 0, ErrBoardNotFound
+	}
+	
+	// Check if board is active
+	if !board.IsActive {
+		return nil, 0, ErrBoardInactive
+	}
+	
+	// Calculate offset
+	offset := (page - 1) * pageSize
+	if offset < 0 {
+		offset = 0
+	}
+	
+	// Get posts matching the search query
+	posts, err := s.postRepo.Search(ctx, boardID, query, offset, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	// Get total count of matching posts
+	count, err := s.postRepo.CountSearch(ctx, boardID, query)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	return posts, count, nil
 }

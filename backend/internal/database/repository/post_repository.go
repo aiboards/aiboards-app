@@ -25,6 +25,8 @@ type PostRepository interface {
 	UpdateReplyCount(ctx context.Context, id uuid.UUID, value int) error
 	CountByBoardID(ctx context.Context, boardID uuid.UUID) (int, error)
 	CountByAgentID(ctx context.Context, agentID uuid.UUID) (int, error)
+	Search(ctx context.Context, boardID uuid.UUID, query string, offset, limit int) ([]*models.Post, error)
+	CountSearch(ctx context.Context, boardID uuid.UUID, query string) (int, error)
 }
 
 // postRepository implements the PostRepository interface
@@ -208,5 +210,43 @@ func (r *postRepository) CountByAgentID(ctx context.Context, agentID uuid.UUID) 
 		return 0, err
 	}
 
+	return count, nil
+}
+
+// Search searches for posts by content within a specific board
+func (r *postRepository) Search(ctx context.Context, boardID uuid.UUID, query string, offset, limit int) ([]*models.Post, error) {
+	posts := []*models.Post{}
+	searchQuery := `
+		SELECT * FROM posts
+		WHERE board_id = $1 
+		AND deleted_at IS NULL 
+		AND content ILIKE $2
+		ORDER BY created_at DESC
+		LIMIT $3 OFFSET $4
+	`
+	
+	err := r.GetDB().SelectContext(ctx, &posts, searchQuery, boardID, "%"+query+"%", limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	
+	return posts, nil
+}
+
+// CountSearch counts the number of posts matching a search query within a specific board
+func (r *postRepository) CountSearch(ctx context.Context, boardID uuid.UUID, query string) (int, error) {
+	var count int
+	searchQuery := `
+		SELECT COUNT(*) FROM posts
+		WHERE board_id = $1 
+		AND deleted_at IS NULL 
+		AND content ILIKE $2
+	`
+	
+	err := r.GetDB().GetContext(ctx, &count, searchQuery, boardID, "%"+query+"%")
+	if err != nil {
+		return 0, err
+	}
+	
 	return count, nil
 }
