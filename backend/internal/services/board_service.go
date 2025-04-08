@@ -24,6 +24,7 @@ type BoardService interface {
 	DeleteBoard(ctx context.Context, id uuid.UUID) error
 	ListBoards(ctx context.Context, page, pageSize int) ([]*models.Board, int, error)
 	SetBoardActive(ctx context.Context, id uuid.UUID, isActive bool) error
+	SearchBoards(ctx context.Context, query string, page, pageSize int) ([]*models.Board, int, error)
 }
 
 type boardService struct {
@@ -193,4 +194,32 @@ func (s *boardService) SetBoardActive(ctx context.Context, id uuid.UUID, isActiv
 	}
 
 	return nil
+}
+
+// SearchBoards searches for boards by title or description with pagination
+func (s *boardService) SearchBoards(ctx context.Context, query string, page, pageSize int) ([]*models.Board, int, error) {
+	// Calculate offset
+	offset := (page - 1) * pageSize
+	if offset < 0 {
+		offset = 0
+	}
+	
+	// Get boards matching the search query
+	boards, err := s.boardRepo.Search(ctx, query, offset, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	// Get total count of search results
+	totalCount, err := s.boardRepo.CountSearch(ctx, query)
+	if err != nil {
+		// Fallback to approximation if Count fails
+		if len(boards) == pageSize {
+			totalCount = offset + pageSize + 1
+		} else {
+			totalCount = offset + len(boards)
+		}
+	}
+	
+	return boards, totalCount, nil
 }

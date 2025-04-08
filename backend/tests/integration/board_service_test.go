@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"strings"
 )
 
 func setupBoardTest(t *testing.T) (*utils.TestEnv, services.BoardService) {
@@ -245,4 +246,139 @@ func TestBoardNotFound_Integration(t *testing.T) {
 	err = boardService.SetBoardActive(env.Ctx, randomID, true)
 	assert.Error(t, err)
 	assert.Equal(t, services.ErrBoardNotFound, err)
+}
+
+func TestSearchBoards_Integration(t *testing.T) {
+	// Setup
+	env, boardService := setupBoardTest(t)
+	defer env.Cleanup()
+
+	// Create a test user
+	userID, _ := env.CreateTestUser()
+
+	// Create boards with different titles and descriptions
+	boardTitles := []string{
+		"AI Development Board",
+		"Machine Learning Discussion",
+		"Data Science Projects",
+		"Neural Networks Research",
+		"Computer Vision Applications",
+	}
+	
+	boardDescriptions := []string{
+		"A board for discussing AI development topics",
+		"Share and discuss machine learning algorithms",
+		"Collaborate on data science projects",
+		"Research on neural networks and deep learning",
+		"Applications of computer vision in various fields",
+	}
+	
+	for i := 0; i < len(boardTitles); i++ {
+		agent := env.CreateTestAgent(userID)
+		_, err := boardService.CreateBoard(env.Ctx, agent.ID, boardTitles[i], boardDescriptions[i], true)
+		require.NoError(t, err)
+	}
+
+	// Test cases
+	testCases := []struct {
+		name           string
+		searchQuery    string
+		expectedCount  int
+		expectedPhrase string
+	}{
+		{
+			name:           "Search by exact title match",
+			searchQuery:    "AI Development Board",
+			expectedCount:  1,
+			expectedPhrase: "AI Development",
+		},
+		{
+			name:           "Search by partial title match",
+			searchQuery:    "Machine Learning",
+			expectedCount:  1,
+			expectedPhrase: "Machine Learning",
+		},
+		{
+			name:           "Search by description content",
+			searchQuery:    "neural networks",
+			expectedCount:  1, 
+			expectedPhrase: "Neural Networks",
+		},
+		{
+			name:           "Search by common term across boards",
+			searchQuery:    "research",
+			expectedCount:  1,
+			expectedPhrase: "Research",
+		},
+		{
+			name:           "Search with no results",
+			searchQuery:    "blockchain",
+			expectedCount:  0,
+			expectedPhrase: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Search boards
+			boards, totalCount, err := boardService.SearchBoards(env.Ctx, tc.searchQuery, 1, 10)
+			
+			// Assert results
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedCount, totalCount)
+			assert.Len(t, boards, tc.expectedCount)
+			
+			// If we expect results, check the first result contains our phrase
+			if tc.expectedCount > 0 {
+				foundMatch := false
+				for _, board := range boards {
+					if contains(board.Title, tc.expectedPhrase) || contains(board.Description, tc.expectedPhrase) {
+						foundMatch = true
+						break
+					}
+				}
+				assert.True(t, foundMatch, "Expected to find %s in search results", tc.expectedPhrase)
+			}
+		})
+	}
+	
+	// Test pagination
+	t.Run("Test pagination", func(t *testing.T) {
+		// Add more boards to ensure we have enough for pagination
+		for i := 0; i < 5; i++ {
+			agent := env.CreateTestAgent(userID)
+			_, err := boardService.CreateBoard(env.Ctx, agent.ID, 
+				"AI Board "+time.Now().String(), "AI description", true)
+			require.NoError(t, err)
+		}
+		
+		// Search with a common term that should match many boards
+		query := "AI"
+		pageSize := 3
+		
+		// Get first page
+		page1Results, totalCount, err := boardService.SearchBoards(env.Ctx, query, 1, pageSize)
+		require.NoError(t, err)
+		assert.Len(t, page1Results, pageSize)
+		assert.GreaterOrEqual(t, totalCount, 6) // At least 6 boards with "AI" in them
+		
+		// Get second page
+		page2Results, totalCount2, err := boardService.SearchBoards(env.Ctx, query, 2, pageSize)
+		require.NoError(t, err)
+		assert.GreaterOrEqual(t, len(page2Results), 1) // At least 1 more result
+		assert.Equal(t, totalCount, totalCount2) // Total count should be the same
+		
+		// Ensure page 1 and page 2 contain different boards
+		for _, p1Board := range page1Results {
+			for _, p2Board := range page2Results {
+				assert.NotEqual(t, p1Board.ID, p2Board.ID, "Page 1 and Page 2 should contain different boards")
+			}
+		}
+	})
+}
+
+// Helper function to check if a string contains another string in a case-insensitive way
+func contains(s, substr string) bool {
+	s, substr = strings.ToLower(s), strings.ToLower(substr)
+	return strings.Contains(s, substr)
 }

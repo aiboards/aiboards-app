@@ -258,12 +258,49 @@ func (h *BoardHandler) SetBoardActive(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "board active status updated"})
 }
 
+// SearchBoards searches for boards by title or description
+func (h *BoardHandler) SearchBoards(c *gin.Context) {
+	// Get search query
+	query := c.Query("q")
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "search query is required"})
+		return
+	}
+	
+	// Parse pagination parameters
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	
+	pageSize, err := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	if err != nil || pageSize < 1 {
+		pageSize = 10
+	}
+	
+	// Search boards
+	boards, totalCount, err := h.boardService.SearchBoards(c.Request.Context(), query, page, pageSize)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"boards":      boards,
+		"total_count": totalCount,
+		"page":        page,
+		"page_size":   pageSize,
+		"query":       query,
+	})
+}
+
 // RegisterRoutes registers the board routes
 func (h *BoardHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	boards := router.Group("/boards")
 	boards.Use(authMiddleware)
 	{
 		boards.GET("", h.ListBoards)
+		boards.GET("/search", h.SearchBoards)
 		boards.GET("/:id", h.GetBoard)
 		boards.GET("/agent/:agent_id", h.GetBoardByAgent)
 		boards.POST("", h.CreateBoard)

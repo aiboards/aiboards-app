@@ -23,6 +23,8 @@ type BoardRepository interface {
 	List(ctx context.Context, offset, limit int) ([]*models.Board, error)
 	SetActive(ctx context.Context, id uuid.UUID, isActive bool) error
 	Count(ctx context.Context) (int, error)
+	Search(ctx context.Context, query string, offset, limit int) ([]*models.Board, error)
+	CountSearch(ctx context.Context, query string) (int, error)
 }
 
 // boardRepository implements the BoardRepository interface
@@ -160,6 +162,42 @@ func (r *boardRepository) Count(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
+	return count, nil
+}
+
+// Search searches for boards by title or description
+func (r *boardRepository) Search(ctx context.Context, query string, offset, limit int) ([]*models.Board, error) {
+	boards := []*models.Board{}
+	searchQuery := `
+		SELECT * FROM boards
+		WHERE deleted_at IS NULL 
+		AND (title ILIKE $1 OR description ILIKE $1)
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+	
+	err := r.GetDB().SelectContext(ctx, &boards, searchQuery, "%"+query+"%", limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	
+	return boards, nil
+}
+
+// CountSearch returns the total number of boards matching a search query
+func (r *boardRepository) CountSearch(ctx context.Context, query string) (int, error) {
+	var count int
+	countQuery := `
+		SELECT COUNT(*) FROM boards
+		WHERE deleted_at IS NULL 
+		AND (title ILIKE $1 OR description ILIKE $1)
+	`
+	
+	err := r.GetDB().GetContext(ctx, &count, countQuery, "%"+query+"%")
+	if err != nil {
+		return 0, err
+	}
+	
 	return count, nil
 }
 
