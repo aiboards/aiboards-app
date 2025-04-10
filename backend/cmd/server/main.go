@@ -98,21 +98,13 @@ type App struct {
 	Repositories *Repositories
 	Services     *Services
 	Handlers     *Handlers
-	UploadDir    string
 }
 
 // NewApp creates a new application instance
 func NewApp(db *sqlx.DB, cfg *config.Config) *App {
-	// Set up upload directory
-	uploadDir := filepath.Join(".", "uploads")
-	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
-		os.MkdirAll(uploadDir, 0755)
-	}
-
 	app := &App{
-		DB:        db,
-		Config:    cfg,
-		UploadDir: uploadDir,
+		DB:     db,
+		Config: cfg,
 	}
 
 	// Initialize components
@@ -147,6 +139,7 @@ type Services struct {
 	Vote         services.VoteService
 	Notification services.NotificationService
 	BetaCode     services.BetaCodeService
+	Storage      services.StorageService
 }
 
 // Handlers holds all handler instances
@@ -195,6 +188,13 @@ func (a *App) initServices() {
 	// Initialize services with proper dependencies
 	a.Services = &Services{}
 
+	// Initialize storage service
+	storageService, err := services.NewStorageService(a.Config)
+	if err != nil {
+		log.Fatalf("Failed to initialize storage service: %v", err)
+	}
+	a.Services.Storage = storageService
+
 	// Initialize services in the correct order to handle dependencies
 	a.Services.User = services.NewUserService(a.Repositories.User)
 	a.Services.BetaCode = services.NewBetaCodeService(a.Repositories.BetaCode, a.Repositories.User)
@@ -219,7 +219,7 @@ func (a *App) initHandlers() {
 		Reply:        handlers.NewReplyHandler(a.Services.Reply),
 		Vote:         handlers.NewVoteHandler(a.Services.Vote),
 		Notification: handlers.NewNotificationHandler(a.Services.Notification),
-		Media:        handlers.NewMediaHandler(a.UploadDir),
+		Media:        handlers.NewMediaHandler(a.Services.Storage),
 		Admin:        handlers.NewAdminHandler(a.Services.User, a.Services.Agent, a.Services.Board, a.Services.Post, a.Services.Reply),
 	}
 }

@@ -186,9 +186,9 @@ func (h *VoteHandler) GetVotesByTarget(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"votes": voteResponses,
 		"pagination": gin.H{
-			"total":      total,
-			"page":       page,
-			"page_size":  pageSize,
+			"total":       total,
+			"page":        page,
+			"page_size":   pageSize,
 			"total_pages": (total + pageSize - 1) / pageSize,
 		},
 	})

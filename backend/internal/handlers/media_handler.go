@@ -1,42 +1,24 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 
 	"github.com/garrettallen/aiboards/backend/internal/models"
+	"github.com/garrettallen/aiboards/backend/internal/services"
 )
 
 // MediaHandler handles media upload endpoints
 type MediaHandler struct {
-	uploadDir string
+	storageService services.StorageService
 }
 
 // NewMediaHandler creates a new MediaHandler
-func NewMediaHandler(uploadDir string) *MediaHandler {
-	// Create upload directory if it doesn't exist
-	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
-		os.MkdirAll(uploadDir, 0755)
-	}
-
+func NewMediaHandler(storageService services.StorageService) *MediaHandler {
 	return &MediaHandler{
-		uploadDir: uploadDir,
+		storageService: storageService,
 	}
-}
-
-// UploadResponse represents the response for an upload
-type UploadResponse struct {
-	URL      string    `json:"url"`
-	Filename string    `json:"filename"`
-	Size     int64     `json:"size"`
-	MimeType string    `json:"mime_type"`
-	UploadedAt time.Time `json:"uploaded_at"`
 }
 
 // UploadFile handles file uploads
@@ -75,36 +57,42 @@ func (h *MediaHandler) UploadFile(c *gin.Context) {
 		return
 	}
 
-	// Generate unique filename
-	ext := filepath.Ext(header.Filename)
-	filename := fmt.Sprintf("%s-%s%s", agent.ID.String(), uuid.New().String(), ext)
-	
-	// Create agent directory if it doesn't exist
-	agentDir := filepath.Join(h.uploadDir, agent.ID.String())
-	if _, err := os.Stat(agentDir); os.IsNotExist(err) {
-		os.MkdirAll(agentDir, 0755)
-	}
-	
-	// Save file
-	filePath := filepath.Join(agentDir, filename)
-	if err := c.SaveUploadedFile(header, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+	// Upload file using storage service
+	fileInfo, err := h.storageService.UploadFile(c.Request.Context(), file, header.Filename, contentType, header.Size, agent.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file: " + err.Error()})
 		return
 	}
 
-	// Generate public URL
-	// In a real-world scenario, this would be a CDN URL or a public URL to the file
-	// For simplicity, we'll use a relative URL
-	publicURL := fmt.Sprintf("/uploads/%s/%s", agent.ID.String(), filename)
-
 	// Return response
-	c.JSON(http.StatusOK, UploadResponse{
-		URL:      publicURL,
-		Filename: header.Filename,
-		Size:     header.Size,
-		MimeType: contentType,
-		UploadedAt: time.Now(),
-	})
+	c.JSON(http.StatusOK, fileInfo)
+}
+
+// DeleteFile handles file deletion
+func (h *MediaHandler) DeleteFile(c *gin.Context) {
+	// Get agent from context (set by AuthMiddleware)
+	_, exists := c.Get("agent")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Agent not found in context"})
+		return
+	}
+
+	// Get file URL from request
+	fileURL := c.Query("url")
+	if fileURL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File URL is required"})
+		return
+	}
+
+	// Delete file using storage service
+	err := h.storageService.DeleteFile(c.Request.Context(), fileURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete file: " + err.Error()})
+		return
+	}
+
+	// Return success response
+	c.JSON(http.StatusOK, gin.H{"message": "File deleted successfully"})
 }
 
 // isAllowedFileType checks if the file type is allowed
@@ -126,8 +114,6 @@ func (h *MediaHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gi
 	media.Use(authMiddleware)
 	{
 		media.POST("/upload", h.UploadFile)
+		media.DELETE("/delete", h.DeleteFile)
 	}
-
-	// Serve uploaded files
-	router.Static("/uploads", h.uploadDir)
 }
