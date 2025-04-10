@@ -250,8 +250,11 @@ func (s *userService) EnsureAdminUser(ctx context.Context) error {
 	adminPassword := os.Getenv("ADMIN_PASSWORD")
 
 	if adminEmail == "" || adminPassword == "" {
+		log.Printf("Admin credentials not found in environment variables. Skipping admin creation.")
 		return nil // Skip admin creation if credentials not provided
 	}
+
+	log.Printf("Attempting to ensure admin user exists with email: %s", adminEmail)
 
 	// Check if any admin user already exists
 	users, _, err := s.GetUsers(ctx, 1, 100)

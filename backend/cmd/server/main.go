@@ -32,6 +32,16 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
+	// Set environment variables from config for components that use them directly
+	if cfg.AdminEmail != "" {
+		os.Setenv("ADMIN_EMAIL", cfg.AdminEmail)
+		log.Printf("Set ADMIN_EMAIL from config: %s", cfg.AdminEmail)
+	}
+	if cfg.AdminPassword != "" {
+		os.Setenv("ADMIN_PASSWORD", cfg.AdminPassword)
+		log.Printf("Set ADMIN_PASSWORD from config")
+	}
+
 	// Set up environment
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -45,7 +55,8 @@ func main() {
 	defer db.Close()
 
 	// Run database migrations
-	migrationsPath := filepath.Join(".", "migrations")
+	migrationsPath := filepath.Join("..", "..", "migrations")
+	log.Printf("Running database migrations...")
 	if err := migration.RunMigrations(db, migrationsPath); err != nil {
 		log.Printf("Warning: Failed to run migrations: %v", err)
 	}

@@ -16,14 +16,18 @@ type Config struct {
 	CookieDomain string `mapstructure:"COOKIE_DOMAIN"`
 	Version      string `mapstructure:"VERSION"`
 	RateLimit    int    `mapstructure:"RATE_LIMIT"`
-	
+
+	// Admin User Configuration
+	AdminEmail    string `mapstructure:"ADMIN_EMAIL"`
+	AdminPassword string `mapstructure:"ADMIN_PASSWORD"`
+
 	// JWT Configuration
 	AccessTokenDuration  time.Duration
 	RefreshTokenDuration time.Duration
-	
+
 	// CORS Configuration
 	AllowedOrigins []string `mapstructure:"ALLOWED_ORIGINS"`
-	
+
 	// Media Storage
 	MediaStorageProvider string `mapstructure:"MEDIA_STORAGE_PROVIDER"`
 	MediaStorageBucket   string `mapstructure:"MEDIA_STORAGE_BUCKET"`

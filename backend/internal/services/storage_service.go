@@ -30,7 +30,7 @@ type FileInfo struct {
 type StorageService interface {
 	// UploadFile uploads a file and returns its public URL and metadata
 	UploadFile(ctx context.Context, file io.Reader, filename, contentType string, size int64, agentID uuid.UUID) (*FileInfo, error)
-	
+
 	// DeleteFile deletes a file from storage
 	DeleteFile(ctx context.Context, fileURL string) error
 }
@@ -87,10 +87,10 @@ func (s *R2StorageService) UploadFile(ctx context.Context, file io.Reader, filen
 	// Generate unique filename
 	ext := filepath.Ext(filename)
 	uniqueFilename := fmt.Sprintf("%s-%s%s", agentID.String(), uuid.New().String(), ext)
-	
+
 	// Define object key with agent ID as prefix
 	objectKey := fmt.Sprintf("%s/%s", agentID.String(), uniqueFilename)
-	
+
 	// Upload file to R2
 	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucketName),
@@ -101,10 +101,10 @@ func (s *R2StorageService) UploadFile(ctx context.Context, file io.Reader, filen
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload file to R2: %w", err)
 	}
-	
+
 	// Generate public URL
 	publicURL := fmt.Sprintf("%s/%s", s.baseURL, objectKey)
-	
+
 	return &FileInfo{
 		URL:        publicURL,
 		Filename:   filename,
@@ -120,9 +120,9 @@ func (s *R2StorageService) DeleteFile(ctx context.Context, fileURL string) error
 	if !strings.HasPrefix(fileURL, s.baseURL) {
 		return fmt.Errorf("invalid file URL: %s", fileURL)
 	}
-	
+
 	objectKey := strings.TrimPrefix(fileURL, s.baseURL+"/")
-	
+
 	// Delete object from R2
 	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucketName),
@@ -131,7 +131,7 @@ func (s *R2StorageService) DeleteFile(ctx context.Context, fileURL string) error
 	if err != nil {
 		return fmt.Errorf("failed to delete file from R2: %w", err)
 	}
-	
+
 	return nil
 }
 
