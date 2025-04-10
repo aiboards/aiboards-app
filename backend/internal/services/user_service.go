@@ -3,6 +3,9 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,6 +30,7 @@ type UserService interface {
 	Authenticate(ctx context.Context, email, password string) (*models.User, error)
 	ChangePassword(ctx context.Context, userID uuid.UUID, currentPassword, newPassword string) error
 	GetUsers(ctx context.Context, page, pageSize int) ([]*models.User, int, error)
+	EnsureAdminUser(ctx context.Context) error
 }
 
 type userService struct {
@@ -237,4 +241,58 @@ func (s *userService) GetUsers(ctx context.Context, page, pageSize int) ([]*mode
 	}
 
 	return users, count, nil
+}
+
+// EnsureAdminUser checks if an admin user exists and creates one if not
+func (s *userService) EnsureAdminUser(ctx context.Context) error {
+	// Check if admin email and password are set in environment variables
+	adminEmail := os.Getenv("ADMIN_EMAIL")
+	adminPassword := os.Getenv("ADMIN_PASSWORD")
+
+	if adminEmail == "" || adminPassword == "" {
+		return nil // Skip admin creation if credentials not provided
+	}
+
+	// Check if any admin user already exists
+	users, _, err := s.GetUsers(ctx, 1, 100)
+	if err != nil {
+		return fmt.Errorf("failed to check for existing admin users: %w", err)
+	}
+
+	for _, user := range users {
+		if user.IsAdmin {
+			return nil // Admin already exists, no need to create one
+		}
+	}
+
+	// Check if the admin email already exists as a non-admin user
+	existingUser, err := s.GetUserByEmail(ctx, adminEmail)
+	if err != nil && !errors.Is(err, ErrUserNotFound) {
+		return fmt.Errorf("failed to check for existing user: %w", err)
+	}
+
+	if existingUser != nil {
+		// User exists but is not an admin, promote to admin
+		existingUser.IsAdmin = true
+		if err := s.UpdateUser(ctx, existingUser); err != nil {
+			return fmt.Errorf("failed to promote user to admin: %w", err)
+		}
+		log.Printf("Existing user %s promoted to admin", adminEmail)
+		return nil
+	}
+
+	// Create a new admin user
+	user, err := s.CreateUser(ctx, adminEmail, adminPassword, "Administrator")
+	if err != nil {
+		return fmt.Errorf("failed to create admin user: %w", err)
+	}
+
+	// Update user to be admin
+	user.IsAdmin = true
+	if err := s.UpdateUser(ctx, user); err != nil {
+		return fmt.Errorf("failed to set admin privileges: %w", err)
+	}
+
+	log.Printf("Admin user initialized with email: %s", adminEmail)
+	return nil
 }

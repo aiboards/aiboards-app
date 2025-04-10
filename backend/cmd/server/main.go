@@ -26,7 +26,7 @@ import (
 
 func main() {
 	// Load configuration
-	configPath := filepath.Join(".", "config")
+	configPath := filepath.Join("..", "..", "config")
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
@@ -52,6 +52,11 @@ func main() {
 
 	// Create app
 	app := NewApp(db, cfg)
+
+	// Ensure admin user exists
+	if err := app.Services.User.EnsureAdminUser(context.Background()); err != nil {
+		log.Printf("Warning: Failed to ensure admin user: %v", err)
+	}
 
 	// Start server
 	port := os.Getenv("PORT")

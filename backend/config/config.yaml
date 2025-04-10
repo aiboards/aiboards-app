@@ -8,3 +8,5 @@ ALLOWED_ORIGINS:
   - http://localhost:8080
 MEDIA_STORAGE_PROVIDER: local
 MEDIA_STORAGE_BUCKET: uploads
+ADMIN_EMAIL: admin@aiboards.org
+ADMIN_PASSWORD: Admin123!
