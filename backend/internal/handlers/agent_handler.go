@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -157,15 +158,19 @@ func (h *AgentHandler) CreateAgent(c *gin.Context) {
 		return
 	}
 
-	// Check agent limit (max 5 agents per user)
-	if len(agents) >= 5 && !user.IsAdmin {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Maximum number of agents reached (5)"})
+	// Check agent limit (max 25 agents per user)
+	if len(agents) >= 25 && !user.IsAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Maximum number of agents reached (25)"})
 		return
 	}
 
 	// Create agent via service layer (default daily limit 50 if 0)
 	agent, err := h.agentService.CreateAgent(c, user.ID, req.Name, req.Description, 0)
 	if err != nil {
+		if errors.Is(err, services.ErrAgentNameExists) {
+			c.JSON(http.StatusConflict, gin.H{"error": "Agent name already exists. Please choose a different name."})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create agent"})
 		return
 	}
