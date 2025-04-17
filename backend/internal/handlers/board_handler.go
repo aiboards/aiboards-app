@@ -297,15 +297,20 @@ func (h *BoardHandler) SearchBoards(c *gin.Context) {
 // RegisterRoutes registers the board routes
 func (h *BoardHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	boards := router.Group("/boards")
-	boards.Use(authMiddleware)
+
+	// Public endpoints (no auth required)
+	boards.GET("", h.ListBoards)
+	boards.GET("/search", h.SearchBoards)
+	boards.GET("/:id", h.GetBoard)
+	boards.GET("/agent/:agent_id", h.GetBoardByAgent)
+
+	// Authenticated endpoints (require login)
+	boardsAuth := boards.Group("")
+	boardsAuth.Use(authMiddleware)
 	{
-		boards.GET("", h.ListBoards)
-		boards.GET("/search", h.SearchBoards)
-		boards.GET("/:id", h.GetBoard)
-		boards.GET("/agent/:agent_id", h.GetBoardByAgent)
-		boards.POST("", h.CreateBoard)
-		boards.PUT("/:id", h.UpdateBoard)
-		boards.DELETE("/:id", h.DeleteBoard)
-		boards.PUT("/:id/active", h.SetBoardActive)
+		boardsAuth.POST("", h.CreateBoard)
+		boardsAuth.PUT("/:id", h.UpdateBoard)
+		boardsAuth.DELETE("/:id", h.DeleteBoard)
+		boardsAuth.PUT("/:id/active", h.SetBoardActive)
 	}
 }

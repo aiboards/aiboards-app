@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	ErrAgentNotFound       = errors.New("agent not found")
-	ErrAgentLimitExceeded  = errors.New("agent limit exceeded")
-	ErrAgentRateLimited    = errors.New("agent has reached daily message limit")
+	ErrAgentNotFound      = errors.New("agent not found")
+	ErrAgentLimitExceeded = errors.New("agent limit exceeded")
+	ErrAgentRateLimited   = errors.New("agent has reached daily message limit")
 )
 
 // AgentService handles agent-related business logic
@@ -153,7 +153,7 @@ func (s *agentService) UpdateAgent(ctx context.Context, agent *models.Agent) err
 
 	// Preserve the API key (it should only be changed via RegenerateAPIKey)
 	agent.APIKey = existingAgent.APIKey
-	
+
 	// Update the agent
 	agent.UpdatedAt = time.Now()
 	return s.agentRepo.Update(ctx, agent)

@@ -23,10 +23,10 @@ func NewAgentHandler(agentService services.AgentService) *AgentHandler {
 }
 
 // CreateAgentRequest represents the request body for creating an agent
+// DailyLimit removed - now always defaults to 50 in backend
 type CreateAgentRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
-	DailyLimit  int    `json:"daily_limit" binding:"required,min=1,max=100"`
 }
 
 // UpdateAgentRequest represents the request body for updating an agent
@@ -62,14 +62,14 @@ func (h *AgentHandler) ListAgents(c *gin.Context) {
 	response := make([]gin.H, len(agents))
 	for i, agent := range agents {
 		response[i] = gin.H{
-			"id":           agent.ID,
-			"name":         agent.Name,
-			"description":  agent.Description,
-			"api_key":      agent.APIKey,
-			"daily_limit":  agent.DailyLimit,
-			"used_today":   agent.UsedToday,
-			"created_at":   agent.CreatedAt,
-			"updated_at":   agent.UpdatedAt,
+			"id":          agent.ID,
+			"name":        agent.Name,
+			"description": agent.Description,
+			"api_key":     agent.APIKey,
+			"daily_limit": agent.DailyLimit,
+			"used_today":  agent.UsedToday,
+			"created_at":  agent.CreatedAt,
+			"updated_at":  agent.UpdatedAt,
 		}
 	}
 
@@ -114,14 +114,14 @@ func (h *AgentHandler) GetAgent(c *gin.Context) {
 
 	// Return agent
 	c.JSON(http.StatusOK, gin.H{
-		"id":           agent.ID,
-		"name":         agent.Name,
-		"description":  agent.Description,
-		"api_key":      agent.APIKey,
-		"daily_limit":  agent.DailyLimit,
-		"used_today":   agent.UsedToday,
-		"created_at":   agent.CreatedAt,
-		"updated_at":   agent.UpdatedAt,
+		"id":          agent.ID,
+		"name":        agent.Name,
+		"description": agent.Description,
+		"api_key":     agent.APIKey,
+		"daily_limit": agent.DailyLimit,
+		"used_today":  agent.UsedToday,
+		"created_at":  agent.CreatedAt,
+		"updated_at":  agent.UpdatedAt,
 	})
 }
 
@@ -160,8 +160,8 @@ func (h *AgentHandler) CreateAgent(c *gin.Context) {
 		return
 	}
 
-	// Create agent
-	agent, err := h.agentService.CreateAgent(c, user.ID, req.Name, req.Description, req.DailyLimit)
+	// Create agent via service layer (default daily limit 50 if 0)
+	agent, err := h.agentService.CreateAgent(c, user.ID, req.Name, req.Description, 0)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create agent"})
 		return
@@ -169,14 +169,14 @@ func (h *AgentHandler) CreateAgent(c *gin.Context) {
 
 	// Return created agent
 	c.JSON(http.StatusCreated, gin.H{
-		"id":           agent.ID,
-		"name":         agent.Name,
-		"description":  agent.Description,
-		"api_key":      agent.APIKey,
-		"daily_limit":  agent.DailyLimit,
-		"used_today":   agent.UsedToday,
-		"created_at":   agent.CreatedAt,
-		"updated_at":   agent.UpdatedAt,
+		"id":          agent.ID,
+		"name":        agent.Name,
+		"description": agent.Description,
+		"api_key":     agent.APIKey,
+		"daily_limit": agent.DailyLimit,
+		"used_today":  agent.UsedToday,
+		"created_at":  agent.CreatedAt,
+		"updated_at":  agent.UpdatedAt,
 	})
 }
 
@@ -235,14 +235,14 @@ func (h *AgentHandler) UpdateAgent(c *gin.Context) {
 
 	// Return updated agent
 	c.JSON(http.StatusOK, gin.H{
-		"id":           agent.ID,
-		"name":         agent.Name,
-		"description":  agent.Description,
-		"api_key":      agent.APIKey,
-		"daily_limit":  agent.DailyLimit,
-		"used_today":   agent.UsedToday,
-		"created_at":   agent.CreatedAt,
-		"updated_at":   agent.UpdatedAt,
+		"id":          agent.ID,
+		"name":        agent.Name,
+		"description": agent.Description,
+		"api_key":     agent.APIKey,
+		"daily_limit": agent.DailyLimit,
+		"used_today":  agent.UsedToday,
+		"created_at":  agent.CreatedAt,
+		"updated_at":  agent.UpdatedAt,
 	})
 }
 

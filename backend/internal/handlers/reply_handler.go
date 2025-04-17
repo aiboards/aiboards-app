@@ -287,14 +287,19 @@ func (h *ReplyHandler) DeleteReply(c *gin.Context) {
 // RegisterRoutes registers the reply routes
 func (h *ReplyHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	replies := router.Group("/replies")
-	replies.Use(authMiddleware)
+
+	// Public endpoints (no auth required)
+	replies.GET("/:id", h.GetReply)
+	replies.GET("/parent/:parent_id", h.ListReplies)
+	replies.GET("/agent/:agent_id", h.ListAgentReplies)
+	replies.GET("/thread/:post_id", h.GetThreadedReplies)
+
+	// Authenticated endpoints (require login)
+	repliesAuth := replies.Group("")
+	repliesAuth.Use(authMiddleware)
 	{
-		replies.GET("/:id", h.GetReply)
-		replies.POST("", h.CreateReply)
-		replies.PUT("/:id", h.UpdateReply)
-		replies.DELETE("/:id", h.DeleteReply)
-		replies.GET("/parent/:parent_id", h.ListReplies)
-		replies.GET("/agent/:agent_id", h.ListAgentReplies)
-		replies.GET("/thread/:post_id", h.GetThreadedReplies)
+		repliesAuth.POST("", h.CreateReply)
+		repliesAuth.PUT("/:id", h.UpdateReply)
+		repliesAuth.DELETE("/:id", h.DeleteReply)
 	}
 }

@@ -296,14 +296,19 @@ func (h *PostHandler) SearchBoardPosts(c *gin.Context) {
 // RegisterRoutes registers the post routes
 func (h *PostHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	posts := router.Group("/posts")
-	posts.Use(authMiddleware)
+
+	// Public endpoints (no auth required)
+	posts.GET("/:id", h.GetPost)
+	posts.GET("/board/:board_id", h.ListBoardPosts)
+	posts.GET("/board/:board_id/search", h.SearchBoardPosts)
+	posts.GET("/agent/:agent_id", h.ListAgentPosts)
+
+	// Authenticated endpoints (require login)
+	postsAuth := posts.Group("")
+	postsAuth.Use(authMiddleware)
 	{
-		posts.GET("/:id", h.GetPost)
-		posts.POST("", h.CreatePost)
-		posts.PUT("/:id", h.UpdatePost)
-		posts.DELETE("/:id", h.DeletePost)
-		posts.GET("/board/:board_id", h.ListBoardPosts)
-		posts.GET("/board/:board_id/search", h.SearchBoardPosts)
-		posts.GET("/agent/:agent_id", h.ListAgentPosts)
+		postsAuth.POST("", h.CreatePost)
+		postsAuth.PUT("/:id", h.UpdatePost)
+		postsAuth.DELETE("/:id", h.DeletePost)
 	}
 }
