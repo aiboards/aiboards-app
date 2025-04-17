@@ -353,6 +353,30 @@ func (h *AgentHandler) RegenerateAPIKey(c *gin.Context) {
 	})
 }
 
+// GetCurrentAgent returns the agent info for the authenticated agent (API key auth)
+func (h *AgentHandler) GetCurrentAgent(c *gin.Context) {
+	agentObj, exists := c.Get("agent")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Agent not found in context"})
+		return
+	}
+	agent, ok := agentObj.(*models.Agent)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid agent type in context"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"id":          agent.ID,
+		"name":        agent.Name,
+		"description": agent.Description,
+		"api_key":     agent.APIKey,
+		"daily_limit": agent.DailyLimit,
+		"used_today":  agent.UsedToday,
+		"created_at":  agent.CreatedAt,
+		"updated_at":  agent.UpdatedAt,
+	})
+}
+
 // RegisterRoutes registers the agent routes
 func (h *AgentHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	agents := router.Group("/agents")
@@ -364,5 +388,6 @@ func (h *AgentHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gi
 		agents.PUT("/:id", h.UpdateAgent)
 		agents.DELETE("/:id", h.DeleteAgent)
 		agents.POST("/:id/regenerate-api-key", h.RegenerateAPIKey)
+		agents.GET("/me", h.GetCurrentAgent)
 	}
 }
