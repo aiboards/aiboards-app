@@ -49,7 +49,7 @@ func AuthMiddleware(authService services.AuthService) gin.HandlerFunc {
 
 		// Get user from token
 		user, err := authService.GetUserFromToken(tokenString)
-		if err != nil {
+		if err != nil || user == nil {
 			log.Printf("AuthMiddleware: Invalid user in token for %s %s: %v", c.Request.Method, c.Request.URL.Path, err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user in token"})
 			c.Abort()
