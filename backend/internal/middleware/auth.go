@@ -14,13 +14,14 @@ import (
 // AuthMiddleware creates a middleware for JWT authentication
 func AuthMiddleware(authService services.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		log.Printf("AuthMiddleware: called for %s", c.Request.URL.Path)
 		// Debug logging
 		log.Printf("AuthMiddleware: Processing request to %s %s", c.Request.Method, c.Request.URL.Path)
 
 		// Get the Authorization header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			log.Printf("AuthMiddleware: No Authorization header for %s %s", c.Request.Method, c.Request.URL.Path)
+			log.Printf("AuthMiddleware: No Authorization header for %s", c.Request.URL.Path)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
 			c.Abort()
 			return
@@ -29,7 +30,7 @@ func AuthMiddleware(authService services.AuthService) gin.HandlerFunc {
 		// Check if the header has the correct format
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			log.Printf("AuthMiddleware: Invalid Authorization header format for %s %s", c.Request.Method, c.Request.URL.Path)
+			log.Printf("AuthMiddleware: Invalid Authorization header format for %s", c.Request.URL.Path)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header format must be Bearer {token}"})
 			c.Abort()
 			return
@@ -37,11 +38,12 @@ func AuthMiddleware(authService services.AuthService) gin.HandlerFunc {
 
 		// Extract the token
 		tokenString := parts[1]
+		log.Printf("AuthMiddleware: token string: %s", tokenString)
 
 		// Validate the token
 		token, err := authService.ValidateToken(tokenString)
 		if err != nil || !token.Valid {
-			log.Printf("AuthMiddleware: Invalid or expired token for %s %s: %v", c.Request.Method, c.Request.URL.Path, err)
+			log.Printf("AuthMiddleware: Invalid or expired token for %s: %v", c.Request.URL.Path, err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
 			return
@@ -49,15 +51,16 @@ func AuthMiddleware(authService services.AuthService) gin.HandlerFunc {
 
 		// Get user from token
 		user, err := authService.GetUserFromToken(tokenString)
+		log.Printf("AuthMiddleware: user: %+v, err: %v", user, err)
 		if err != nil || user == nil {
-			log.Printf("AuthMiddleware: Invalid user in token for %s %s: %v", c.Request.Method, c.Request.URL.Path, err)
+			log.Printf("AuthMiddleware: Invalid user in token for %s: %v", c.Request.URL.Path, err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user in token"})
 			c.Abort()
 			return
 		}
 
 		// Set user in context
-		log.Printf("AuthMiddleware: Setting user %s (IsAdmin=%v) in context for %s %s", user.ID, user.IsAdmin, c.Request.Method, c.Request.URL.Path)
+		log.Printf("AuthMiddleware: Setting user %s (IsAdmin=%v) in context for %s", user.ID, user.IsAdmin, c.Request.URL.Path)
 		c.Set("user", user)
 		c.Next()
 	}
@@ -125,8 +128,10 @@ func CompositeAuthMiddleware(agentService services.AgentService, authService ser
 	apiKeyMW := APIKeyMiddleware(agentService)
 	jwtMW := AuthMiddleware(authService)
 	return func(c *gin.Context) {
+		log.Printf("CompositeAuthMiddleware: called for %s", c.Request.URL.Path)
 		apiKeyMW(c)
-		if c.IsAborted() || c.Keys["agent"] != nil {
+		if c.IsAborted() || (c.Keys != nil && c.Keys["agent"] != nil) {
+			log.Printf("CompositeAuthMiddleware: API key succeeded or aborted for %s", c.Request.URL.Path)
 			return
 		}
 		jwtMW(c)
