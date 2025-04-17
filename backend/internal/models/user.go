@@ -13,7 +13,7 @@ type User struct {
 	Email        string     `json:"email" db:"email"`
 	PasswordHash string     `json:"-" db:"password_hash"` // Never sent to client
 	Name         string     `json:"name" db:"name"`
-	IsAdmin      bool       `json:"is_admin" db:"is_admin"`
+	IsAdmin      bool       `json:"isAdmin" db:"is_admin"`
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
 	DeletedAt    *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`

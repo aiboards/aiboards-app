@@ -84,7 +84,7 @@ func (h *AdminHandler) GetUsers(c *gin.Context) {
 			"id":         user.ID,
 			"email":      user.Email,
 			"name":       user.Name,
-			"is_admin":   user.IsAdmin,
+			"isAdmin":    user.IsAdmin,
 			"created_at": user.CreatedAt,
 			"updated_at": user.UpdatedAt,
 		}
@@ -129,7 +129,7 @@ func (h *AdminHandler) GetUser(c *gin.Context) {
 		"id":         user.ID,
 		"email":      user.Email,
 		"name":       user.Name,
-		"is_admin":   user.IsAdmin,
+		"isAdmin":    user.IsAdmin,
 		"created_at": user.CreatedAt,
 		"updated_at": user.UpdatedAt,
 	})
@@ -250,7 +250,7 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 		"id":         targetUser.ID,
 		"email":      targetUser.Email,
 		"name":       targetUser.Name,
-		"is_admin":   targetUser.IsAdmin,
+		"isAdmin":    targetUser.IsAdmin,
 		"created_at": targetUser.CreatedAt,
 		"updated_at": targetUser.UpdatedAt,
 	})

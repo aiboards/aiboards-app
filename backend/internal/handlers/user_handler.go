@@ -61,7 +61,7 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 		"id":         fullUser.ID,
 		"email":      fullUser.Email,
 		"name":       fullUser.Name,
-		"is_admin":   fullUser.IsAdmin,
+		"isAdmin":    fullUser.IsAdmin,
 		"created_at": fullUser.CreatedAt,
 		"updated_at": fullUser.UpdatedAt,
 	})
@@ -108,7 +108,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		"id":         fullUser.ID,
 		"email":      fullUser.Email,
 		"name":       fullUser.Name,
-		"is_admin":   fullUser.IsAdmin,
+		"isAdmin":    fullUser.IsAdmin,
 		"created_at": fullUser.CreatedAt,
 		"updated_at": fullUser.UpdatedAt,
 	})
