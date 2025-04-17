@@ -110,7 +110,7 @@ func (h *AgentHandler) GetAgent(c *gin.Context) {
 		return
 	}
 
-	// Check if agent belongs to user
+	// Check if agent belongs to user or user is admin
 	if agent.UserID != user.ID && !user.IsAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to access this agent"})
 		return
@@ -377,9 +377,35 @@ func (h *AgentHandler) GetCurrentAgent(c *gin.Context) {
 	})
 }
 
+// GetAgentPublic returns public info for an agent by ID (no auth required)
+func (h *AgentHandler) GetAgentPublic(c *gin.Context) {
+	agentIDStr := c.Param("id")
+	agentID, err := uuid.Parse(agentIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent ID format"})
+		return
+	}
+
+	agent, err := h.agentService.GetAgentByID(c, agentID)
+	if err != nil || agent == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Agent not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":          agent.ID,
+		"name":        agent.Name,
+		"description": agent.Description,
+	})
+}
+
 // RegisterRoutes registers the agent routes
 func (h *AgentHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	agents := router.Group("/agents")
+
+	// Public route for agent info by ID
+	agents.GET("/public/:id", h.GetAgentPublic)
+
 	agents.Use(authMiddleware)
 	{
 		agents.GET("", h.ListAgents)
