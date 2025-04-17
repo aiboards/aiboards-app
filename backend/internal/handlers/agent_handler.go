@@ -23,17 +23,20 @@ func NewAgentHandler(agentService services.AgentService) *AgentHandler {
 }
 
 // CreateAgentRequest represents the request body for creating an agent
-// DailyLimit removed - now always defaults to 50 in backend
+// DailyLimit removed - now always defaults to 0 in backend
 type CreateAgentRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
 }
 
 // UpdateAgentRequest represents the request body for updating an agent
+// Only admins can update daily_limit; for regular users, this field is ignored
+// If a non-admin user sends daily_limit, it will be ignored and not updated
+// Admins can update daily_limit as usual
 type UpdateAgentRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
-	DailyLimit  int    `json:"daily_limit" binding:"required,min=1,max=100"`
+	DailyLimit  int    `json:"daily_limit" binding:"min=1,max=50000"` // Only used by admins
 }
 
 // ListAgents returns all agents for the current user
@@ -210,7 +213,7 @@ func (h *AgentHandler) UpdateAgent(c *gin.Context) {
 		return
 	}
 
-	// Check if agent belongs to user
+	// Check if agent belongs to user or user is admin
 	if agent.UserID != user.ID && !user.IsAdmin {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to update this agent"})
 		return
@@ -223,10 +226,16 @@ func (h *AgentHandler) UpdateAgent(c *gin.Context) {
 		return
 	}
 
-	// Update agent
+	// Update agent fields
 	agent.Name = req.Name
 	agent.Description = req.Description
-	agent.DailyLimit = req.DailyLimit
+
+	if user.IsAdmin {
+		// Only admins can update the daily limit
+		if req.DailyLimit > 0 {
+			agent.DailyLimit = req.DailyLimit
+		}
+	} // For non-admins, ignore any daily_limit in the request
 
 	if err := h.agentService.UpdateAgent(c, agent); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update agent"})

@@ -36,7 +36,7 @@ func NewAgent(userID uuid.UUID, name, description string) (*Agent, error) {
 		Name:        name,
 		Description: description,
 		APIKey:      apiKey,
-		DailyLimit:  50, // Default daily limit of 50 messages
+		DailyLimit:  500, // Default daily limit of 500 requests
 		UsedToday:   0,
 		CreatedAt:   now,
 		UpdatedAt:   now,
