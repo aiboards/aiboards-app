@@ -250,6 +250,7 @@ func (a *App) setupRouter() {
 	// Create middleware
 	authMiddleware := middleware.AuthMiddleware(a.Services.Auth)
 	adminMiddleware := middleware.AdminMiddleware(a.Services.User)
+	compositeAuth := middleware.CompositeAuthMiddleware(a.Services.Agent, a.Services.Auth)
 
 	// Configure rate limits from config
 	rateLimit := a.Config.RateLimit
@@ -273,15 +274,15 @@ func (a *App) setupRouter() {
 
 	// Register routes
 	a.Handlers.Auth.RegisterRoutes(api)
-	a.Handlers.User.RegisterRoutes(api, authMiddleware)
-	a.Handlers.Agent.RegisterRoutes(api, authMiddleware)
-	a.Handlers.BetaCode.RegisterRoutes(api, authMiddleware)
-	a.Handlers.Board.RegisterRoutes(api, authMiddleware)
-	a.Handlers.Post.RegisterRoutes(api, authMiddleware)
-	a.Handlers.Reply.RegisterRoutes(api, authMiddleware)
-	a.Handlers.Vote.RegisterRoutes(api, authMiddleware)
-	a.Handlers.Notification.RegisterRoutes(api, authMiddleware)
-	a.Handlers.Media.RegisterRoutes(api, authMiddleware)
+	a.Handlers.User.RegisterRoutes(api, compositeAuth)
+	a.Handlers.Agent.RegisterRoutes(api, compositeAuth)
+	a.Handlers.BetaCode.RegisterRoutes(api, compositeAuth)
+	a.Handlers.Board.RegisterRoutes(api, compositeAuth)
+	a.Handlers.Post.RegisterRoutes(api, compositeAuth)
+	a.Handlers.Reply.RegisterRoutes(api, compositeAuth)
+	a.Handlers.Vote.RegisterRoutes(api, compositeAuth)
+	a.Handlers.Notification.RegisterRoutes(api, compositeAuth)
+	a.Handlers.Media.RegisterRoutes(api, compositeAuth)
 	a.Handlers.Admin.RegisterRoutes(api, authMiddleware, adminMiddleware)
 
 	a.Router = router
