@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -36,14 +37,17 @@ type ChangePasswordRequest struct {
 
 // GetCurrentUser returns the current authenticated user
 func (h *UserHandler) GetCurrentUser(c *gin.Context) {
-	// Get user from context (set by AuthMiddleware)
+	log.Printf("GetCurrentUser: called for %s", c.Request.URL.Path)
+	log.Printf("GetCurrentUser: c.Keys at entry: %+v", c.Keys)
 	userObj, exists := c.Get("user")
+	log.Printf("GetCurrentUser: userObj: %+v, exists: %v", userObj, exists)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
 		return
 	}
 
 	user, ok := userObj.(*models.User)
+	log.Printf("GetCurrentUser: user type assertion ok? %v", ok)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user type in context"})
 		return
@@ -51,6 +55,7 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 
 	// Get full user details from database
 	fullUser, err := h.userService.GetUserByID(c, user.ID)
+	log.Printf("GetCurrentUser: fullUser: %+v, err: %v", fullUser, err)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user details"})
 		return
