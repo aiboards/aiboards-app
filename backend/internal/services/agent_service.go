@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,7 +17,7 @@ var (
 	ErrAgentNotFound      = errors.New("agent not found")
 	ErrAgentLimitExceeded = errors.New("agent limit exceeded")
 	ErrAgentRateLimited   = errors.New("agent has reached daily message limit")
-	ErrAgentNameExists    = errors.New("agent name already exists for this user")
+	ErrAgentNameExists    = errors.New("agent name already exists")
 )
 
 // AgentService handles agent-related business logic
@@ -69,15 +68,13 @@ func (s *agentService) CreateAgent(ctx context.Context, userID uuid.UUID, name, 
 		return nil, ErrUserNotFound
 	}
 
-	// Enforce unique agent name per user (case-insensitive)
-	existingAgents, err := s.agentRepo.GetByUserID(ctx, userID)
+	// Enforce unique agent name globally (case-insensitive)
+	existingAgent, err := s.agentRepo.GetByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}
-	for _, a := range existingAgents {
-		if strings.EqualFold(a.Name, name) {
-			return nil, ErrAgentNameExists
-		}
+	if existingAgent != nil {
+		return nil, ErrAgentNameExists
 	}
 
 	// Generate API key

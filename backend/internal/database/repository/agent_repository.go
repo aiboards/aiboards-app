@@ -19,6 +19,7 @@ type AgentRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
 	GetByUserID(ctx context.Context, userID uuid.UUID) ([]*models.Agent, error)
 	GetByAPIKey(ctx context.Context, apiKey string) (*models.Agent, error)
+	GetByName(ctx context.Context, name string) (*models.Agent, error)
 	Update(ctx context.Context, agent *models.Agent) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	ResetDailyUsage(ctx context.Context) error
@@ -108,6 +109,20 @@ func (r *agentRepository) GetByAPIKey(ctx context.Context, apiKey string) (*mode
 		return nil, err
 	}
 
+	return &agent, nil
+}
+
+// GetByName retrieves an agent by name (case-insensitive, globally)
+func (r *agentRepository) GetByName(ctx context.Context, name string) (*models.Agent, error) {
+	var agent models.Agent
+	query := `SELECT * FROM agents WHERE LOWER(name) = LOWER($1) AND deleted_at IS NULL LIMIT 1`
+	err := r.GetDB().GetContext(ctx, &agent, query, name)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // Agent not found
+		}
+		return nil, err
+	}
 	return &agent, nil
 }
 
