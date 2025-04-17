@@ -74,41 +74,43 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 
 // UpdateUser updates the current user's information
 func (h *UserHandler) UpdateUser(c *gin.Context) {
-	// Get user from context
+	log.Printf("UpdateUser: called for %s", c.Request.URL.Path)
 	userObj, exists := c.Get("user")
+	log.Printf("UpdateUser: userObj: %+v, exists: %v", userObj, exists)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
 		return
 	}
 
 	user, ok := userObj.(*models.User)
+	log.Printf("UpdateUser: user type assertion ok? %v", ok)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user type in context"})
 		return
 	}
 
-	// Parse request body
 	var req UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("UpdateUser: failed to bind JSON: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Get full user details from database
 	fullUser, err := h.userService.GetUserByID(c, user.ID)
+	log.Printf("UpdateUser: fullUser: %+v, err: %v", fullUser, err)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user details"})
 		return
 	}
 
-	// Update user
 	fullUser.Name = req.Name
 	if err := h.userService.UpdateUser(c, fullUser); err != nil {
+		log.Printf("UpdateUser: failed to update user: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 		return
 	}
 
-	// Return updated user info
+	log.Printf("UpdateUser: successfully updated user %v", fullUser.ID)
 	c.JSON(http.StatusOK, gin.H{
 		"id":         fullUser.ID,
 		"email":      fullUser.Email,
@@ -121,61 +123,68 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 // ChangePassword changes the current user's password
 func (h *UserHandler) ChangePassword(c *gin.Context) {
-	// Get user from context
+	log.Printf("ChangePassword: called for %s", c.Request.URL.Path)
 	userObj, exists := c.Get("user")
+	log.Printf("ChangePassword: userObj: %+v, exists: %v", userObj, exists)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
 		return
 	}
 
 	user, ok := userObj.(*models.User)
+	log.Printf("ChangePassword: user type assertion ok? %v", ok)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user type in context"})
 		return
 	}
 
-	// Parse request body
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("ChangePassword: failed to bind JSON: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Change password
 	err := h.userService.ChangePassword(c, user.ID, req.CurrentPassword, req.NewPassword)
+	log.Printf("ChangePassword: result err: %v", err)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err == services.ErrInvalidCredentials {
 			status = http.StatusUnauthorized
 		}
+		log.Printf("ChangePassword: error response status %d: %v", status, err)
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
 
+	log.Printf("ChangePassword: password changed successfully for user %v", user.ID)
 	c.JSON(http.StatusOK, gin.H{"message": "Password changed successfully"})
 }
 
 // DeleteUser deletes the current user's account
 func (h *UserHandler) DeleteUser(c *gin.Context) {
-	// Get user from context
+	log.Printf("DeleteUser: called for %s", c.Request.URL.Path)
 	userObj, exists := c.Get("user")
+	log.Printf("DeleteUser: userObj: %+v, exists: %v", userObj, exists)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
 		return
 	}
 
 	user, ok := userObj.(*models.User)
+	log.Printf("DeleteUser: user type assertion ok? %v", ok)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user type in context"})
 		return
 	}
 
-	// Delete user
 	if err := h.userService.DeleteUser(c, user.ID); err != nil {
+		log.Printf("DeleteUser: failed to delete user: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return
 	}
 
+	log.Printf("DeleteUser: user %v deleted successfully", user.ID)
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
 

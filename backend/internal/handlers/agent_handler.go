@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -42,21 +43,22 @@ type UpdateAgentRequest struct {
 
 // ListAgents returns all agents for the current user
 func (h *AgentHandler) ListAgents(c *gin.Context) {
-	// Get user from context
+	log.Printf("AgentHandler.ListAgents: called for %s", c.Request.URL.Path)
 	userObj, exists := c.Get("user")
+	log.Printf("AgentHandler.ListAgents: userObj: %+v, exists: %v", userObj, exists)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
 		return
 	}
-
 	user, ok := userObj.(*models.User)
+	log.Printf("AgentHandler.ListAgents: user type assertion ok? %v", ok)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user type in context"})
 		return
 	}
 
-	// Get agents for user
 	agents, err := h.agentService.GetAgentsByUserID(c, user.ID)
+	log.Printf("AgentHandler.ListAgents: agents: %+v, err: %v", agents, err)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve agents"})
 		return
@@ -82,41 +84,45 @@ func (h *AgentHandler) ListAgents(c *gin.Context) {
 
 // GetAgent returns a specific agent by ID
 func (h *AgentHandler) GetAgent(c *gin.Context) {
-	// Parse agent ID from URL
-	agentIDStr := c.Param("id")
-	agentID, err := uuid.Parse(agentIDStr)
+	log.Printf("AgentHandler.GetAgent: called for %s", c.Request.URL.Path)
+	agentID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent ID format"})
+		log.Printf("AgentHandler.GetAgent: invalid agent ID param: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent ID"})
 		return
 	}
 
 	// Get user from context
 	userObj, exists := c.Get("user")
+	log.Printf("AgentHandler.GetAgent: userObj: %+v, exists: %v", userObj, exists)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
 		return
 	}
-
 	user, ok := userObj.(*models.User)
+	log.Printf("AgentHandler.GetAgent: user type assertion ok? %v", ok)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user type in context"})
 		return
 	}
 
-	// Get agent
 	agent, err := h.agentService.GetAgentByID(c, agentID)
+	log.Printf("AgentHandler.GetAgent: agent: %+v, err: %v", agent, err)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve agent"})
 		return
 	}
+	if agent == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Agent not found"})
+		return
+	}
 
-	// Check if agent belongs to user or user is admin
 	if agent.UserID != user.ID && !user.IsAdmin {
+		log.Printf("AgentHandler.GetAgent: forbidden, user %v is not owner or admin", user.ID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to access this agent"})
 		return
 	}
 
-	// Return agent
 	c.JSON(http.StatusOK, gin.H{
 		"id":          agent.ID,
 		"name":        agent.Name,
@@ -355,16 +361,20 @@ func (h *AgentHandler) RegenerateAPIKey(c *gin.Context) {
 
 // GetCurrentAgent returns the agent info for the authenticated agent (API key auth)
 func (h *AgentHandler) GetCurrentAgent(c *gin.Context) {
+	log.Printf("AgentHandler.GetCurrentAgent: called for %s", c.Request.URL.Path)
 	agentObj, exists := c.Get("agent")
+	log.Printf("AgentHandler.GetCurrentAgent: agentObj: %+v, exists: %v", agentObj, exists)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Agent not found in context"})
 		return
 	}
 	agent, ok := agentObj.(*models.Agent)
+	log.Printf("AgentHandler.GetCurrentAgent: agent type assertion ok? %v", ok)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid agent type in context"})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"id":          agent.ID,
 		"name":        agent.Name,

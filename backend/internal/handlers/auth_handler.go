@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"time"
 
@@ -43,13 +44,16 @@ type TokenResponse struct {
 
 // Register handles user registration
 func (h *AuthHandler) Register(c *gin.Context) {
+	log.Printf("AuthHandler.Register: called for %s", c.Request.URL.Path)
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("AuthHandler.Register: failed to bind JSON: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	user, tokens, err := h.authService.Register(c, req.Email, req.Password, req.Name, req.BetaCode)
+	log.Printf("AuthHandler.Register: user: %+v, tokens: %+v, err: %v", user, tokens, err)
 	if err != nil {
 		status := http.StatusInternalServerError
 		switch err {
@@ -58,6 +62,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		case services.ErrInvalidBetaCode:
 			status = http.StatusBadRequest
 		}
+		log.Printf("AuthHandler.Register: error response status %d: %v", status, err)
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
@@ -74,6 +79,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	)
 
 	// Return access token and user info
+	log.Printf("AuthHandler.Register: returning user ID %v", user.ID)
 	c.JSON(http.StatusOK, TokenResponse{
 		User: gin.H{
 			"id":    user.ID,
@@ -89,18 +95,22 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 // Login handles user login
 func (h *AuthHandler) Login(c *gin.Context) {
+	log.Printf("AuthHandler.Login: called for %s", c.Request.URL.Path)
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("AuthHandler.Login: failed to bind JSON: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	user, tokens, err := h.authService.Login(c, req.Email, req.Password)
+	log.Printf("AuthHandler.Login: user: %+v, tokens: %+v, err: %v", user, tokens, err)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err == services.ErrInvalidCredentials {
 			status = http.StatusUnauthorized
 		}
+		log.Printf("AuthHandler.Login: error response status %d: %v", status, err)
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
@@ -117,6 +127,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	)
 
 	// Return access token and user info
+	log.Printf("AuthHandler.Login: returning user ID %v", user.ID)
 	c.JSON(http.StatusOK, TokenResponse{
 		User: gin.H{
 			"id":    user.ID,
@@ -132,21 +143,22 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 // RefreshToken handles token refresh
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	// Get refresh token from cookie
+	log.Printf("AuthHandler.RefreshToken: called for %s", c.Request.URL.Path)
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil {
+		log.Printf("AuthHandler.RefreshToken: no refresh token cookie: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token not found"})
 		return
 	}
 
-	// Refresh tokens
 	tokens, err := h.authService.RefreshTokens(c, refreshToken)
+	log.Printf("AuthHandler.RefreshToken: tokens: %+v, err: %v", tokens, err)
 	if err != nil {
+		log.Printf("AuthHandler.RefreshToken: invalid refresh token: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
 		return
 	}
 
-	// Set new refresh token as HTTP-only cookie
 	c.SetCookie(
 		"refresh_token",
 		tokens.RefreshToken,
@@ -157,7 +169,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		true,  // HTTP only
 	)
 
-	// Return new access token
+	log.Printf("AuthHandler.RefreshToken: returning new access token")
 	c.JSON(http.StatusOK, gin.H{
 		"token": gin.H{
 			"access_token": tokens.AccessToken,

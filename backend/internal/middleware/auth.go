@@ -108,7 +108,7 @@ func APIKeyMiddleware(agentService services.AgentService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKey := c.GetHeader("X-API-Key")
 		if apiKey == "" {
-			c.Next() // No API key, let other auth try
+			// Do NOT call c.Next() here! Just return and let the next middleware run.
 			return
 		}
 		agent, err := agentService.GetAgentByAPIKey(c, apiKey)
