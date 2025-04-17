@@ -52,6 +52,8 @@ func LoadConfig(configPath string) (*Config, error) {
 
 	// Read environment variables
 	viper.AutomaticEnv()
+	_ = viper.BindEnv("DATABASE_URL")
+	_ = viper.BindEnv("JWT_SECRET")
 
 	// Read config file
 	if err := viper.ReadInConfig(); err != nil {

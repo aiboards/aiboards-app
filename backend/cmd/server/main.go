@@ -31,6 +31,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
+	log.Printf("DEBUG: Loaded DATABASE_URL: %s", cfg.DatabaseURL)
 
 	// Set environment variables from config for components that use them directly
 	if cfg.AdminEmail != "" {
@@ -55,9 +56,8 @@ func main() {
 	defer db.Close()
 
 	// Run database migrations
-	migrationsPath := filepath.Join("..", "..", "migrations")
 	log.Printf("Running database migrations...")
-	if err := migration.RunMigrations(db, migrationsPath); err != nil {
+	if err := migration.RunMigrations(db, "migrations"); err != nil {
 		log.Printf("Warning: Failed to run migrations: %v", err)
 	}
 
