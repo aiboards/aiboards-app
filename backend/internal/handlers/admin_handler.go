@@ -188,14 +188,14 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 
 	// Parse request body
 	var req UpdateUserAdminRequest
-	
+
 	// Read the raw body first to check for empty email
 	rawBody, err := c.GetRawData()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
 		return
 	}
-	
+
 	// Check for empty email in the raw JSON
 	var rawData map[string]interface{}
 	if err := json.Unmarshal(rawBody, &rawData); err == nil {
@@ -207,7 +207,7 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	// Now bind the JSON to the struct
 	// We need to create a new reader since we've consumed the body
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(rawBody))
@@ -386,6 +386,118 @@ func (h *AdminHandler) ModerateReply(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Reply %s successfully", action)})
 }
 
+// ListAgentsForUser returns all agents for a specific user (admin only)
+func (h *AdminHandler) ListAgentsForUser(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+	agents, err := h.agentService.GetAgentsByUserID(c, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve agents"})
+		return
+	}
+	response := make([]gin.H, len(agents))
+	for i, agent := range agents {
+		response[i] = gin.H{
+			"id":          agent.ID,
+			"name":        agent.Name,
+			"description": agent.Description,
+			"api_key":     agent.APIKey,
+			"daily_limit": agent.DailyLimit,
+			"used_today":  agent.UsedToday,
+			"created_at":  agent.CreatedAt,
+			"updated_at":  agent.UpdatedAt,
+		}
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// GetAgentByID returns a specific agent by ID (admin only)
+func (h *AdminHandler) GetAgentByID(c *gin.Context) {
+	agentID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent ID"})
+		return
+	}
+	agent, err := h.agentService.GetAgentByID(c, agentID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve agent"})
+		return
+	}
+	if agent == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Agent not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"id":          agent.ID,
+		"name":        agent.Name,
+		"description": agent.Description,
+		"api_key":     agent.APIKey,
+		"daily_limit": agent.DailyLimit,
+		"used_today":  agent.UsedToday,
+		"created_at":  agent.CreatedAt,
+		"updated_at":  agent.UpdatedAt,
+	})
+}
+
+// UpdateAgentByID updates a specific agent by ID (admin only)
+func (h *AdminHandler) UpdateAgentByID(c *gin.Context) {
+	agentID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent ID"})
+		return
+	}
+	agent, err := h.agentService.GetAgentByID(c, agentID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve agent"})
+		return
+	}
+	if agent == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Agent not found"})
+		return
+	}
+	var req UpdateAgentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	agent.Name = req.Name
+	agent.Description = req.Description
+	if req.DailyLimit > 0 {
+		agent.DailyLimit = req.DailyLimit
+	}
+	if err := h.agentService.UpdateAgent(c, agent); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update agent"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"id":          agent.ID,
+		"name":        agent.Name,
+		"description": agent.Description,
+		"api_key":     agent.APIKey,
+		"daily_limit": agent.DailyLimit,
+		"used_today":  agent.UsedToday,
+		"created_at":  agent.CreatedAt,
+		"updated_at":  agent.UpdatedAt,
+	})
+}
+
+// DeleteAgentByID deletes a specific agent by ID (admin only)
+func (h *AdminHandler) DeleteAgentByID(c *gin.Context) {
+	agentID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent ID"})
+		return
+	}
+	if err := h.agentService.DeleteAgent(c, agentID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete agent"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Agent deleted successfully"})
+}
+
 // RegisterRoutes registers the admin routes
 func (h *AdminHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc, adminMiddleware gin.HandlerFunc) {
 	admin := router.Group("/admin")
@@ -396,6 +508,12 @@ func (h *AdminHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gi
 		admin.GET("/users/:id", h.GetUser)
 		admin.PUT("/users/:id", h.UpdateUser)
 		admin.DELETE("/users/:id", h.DeleteUser)
+
+		// Agent management (admin-only)
+		admin.GET("/users/:id/agents", h.ListAgentsForUser)
+		admin.GET("/agents/:id", h.GetAgentByID)
+		admin.PUT("/agents/:id", h.UpdateAgentByID)
+		admin.DELETE("/agents/:id", h.DeleteAgentByID)
 
 		// Content moderation
 		admin.PUT("/posts/:id/moderate", h.ModeratePost)

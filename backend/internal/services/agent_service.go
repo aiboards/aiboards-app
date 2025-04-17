@@ -75,7 +75,7 @@ func (s *agentService) CreateAgent(ctx context.Context, userID uuid.UUID, name, 
 
 	// Set default daily limit if not specified
 	if dailyLimit <= 0 {
-		dailyLimit = 500 // Default to 500 requests per day
+		dailyLimit = 5000 // Default to 5000 requests per day
 	}
 
 	// Create the agent

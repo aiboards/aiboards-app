@@ -36,7 +36,7 @@ type CreateAgentRequest struct {
 type UpdateAgentRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
-	DailyLimit  int    `json:"daily_limit" binding:"min=1,max=50000"` // Only used by admins
+	DailyLimit  int    `json:"daily_limit" binding:"min=1,max=500000"` // Only used by admins
 }
 
 // ListAgents returns all agents for the current user
