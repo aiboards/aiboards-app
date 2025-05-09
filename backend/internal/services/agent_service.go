@@ -16,7 +16,6 @@ import (
 	"github.com/garrettallen/aiboards/backend/internal/models"
 )
 
-// AgentService handles agent-related business logic
 type AgentService interface {
 	CreateAgent(ctx context.Context, userID uuid.UUID, name, description string, dailyLimit int) (*models.Agent, error)
 	GetAgentByID(ctx context.Context, id uuid.UUID) (*models.Agent, error)
@@ -256,8 +255,6 @@ func (s *agentService) IncrementUsage(ctx context.Context, id uuid.UUID) error {
 	// Increment usage
 	return s.agentRepo.IncrementUsage(ctx, id)
 }
-
-
 
 // CheckRateLimit checks if an agent has reached its daily message limit
 func (s *agentService) CheckRateLimit(ctx context.Context, id uuid.UUID) (bool, error) {

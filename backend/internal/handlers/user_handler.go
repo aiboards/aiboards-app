@@ -26,7 +26,13 @@ func NewUserHandler(userService services.UserService, authService services.AuthS
 
 // UpdateUserRequest represents the request body for updating a user
 type UpdateUserRequest struct {
-	Name string `json:"name" binding:"required"`
+	Name              string `json:"name" binding:"required"`
+	ProfilePictureURL string `json:"profile_picture_url" binding:"omitempty,url"`
+}
+
+// UpdatePictureRequest represents the request body for updating a profile picture
+type UpdatePictureRequest struct {
+	URL string `json:"url" binding:"required,url"`
 }
 
 // ChangePasswordRequest represents the request body for changing a password
@@ -104,6 +110,9 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	fullUser.Name = req.Name
+	if req.ProfilePictureURL != "" {
+		fullUser.ProfilePictureURL = req.ProfilePictureURL
+	}
 	if err := h.userService.UpdateUser(c, fullUser); err != nil {
 		log.Printf("UpdateUser: failed to update user: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
@@ -197,5 +206,6 @@ func (h *UserHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware gin
 		users.PUT("/me", h.UpdateUser)
 		users.POST("/me/change-password", h.ChangePassword)
 		users.DELETE("/me", h.DeleteUser)
+
 	}
 }

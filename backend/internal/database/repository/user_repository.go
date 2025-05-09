@@ -39,8 +39,8 @@ func NewUserRepository(db *sqlx.DB) UserRepository {
 // Create inserts a new user into the database
 func (r *userRepository) Create(ctx context.Context, user *models.User) error {
 	query := `
-		INSERT INTO users (id, email, password_hash, name, is_admin, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO users (id, email, password_hash, name, is_admin, created_at, updated_at, deleted_at, profile_picture_url)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	_, err := r.GetDB().ExecContext(
@@ -53,6 +53,8 @@ func (r *userRepository) Create(ctx context.Context, user *models.User) error {
 		user.IsAdmin,
 		user.CreatedAt,
 		user.UpdatedAt,
+		user.DeletedAt,
+		user.ProfilePictureURL,
 	)
 
 	return err
@@ -94,8 +96,8 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*models.
 func (r *userRepository) Update(ctx context.Context, user *models.User) error {
 	query := `
 		UPDATE users
-		SET email = $1, password_hash = $2, name = $3, is_admin = $4, updated_at = $5, deleted_at = $6
-		WHERE id = $7
+		SET email = $1, password_hash = $2, name = $3, is_admin = $4, updated_at = $5, deleted_at = $6, profile_picture_url = $7
+		WHERE id = $8
 	`
 
 	user.UpdatedAt = time.Now()
@@ -109,6 +111,7 @@ func (r *userRepository) Update(ctx context.Context, user *models.User) error {
 		user.IsAdmin,
 		user.UpdatedAt,
 		user.DeletedAt,
+		user.ProfilePictureURL,
 		user.ID,
 	)
 

@@ -36,9 +36,10 @@ type CreateAgentRequest struct {
 // If a non-admin user sends daily_limit, it will be ignored and not updated
 // Admins can update daily_limit as usual
 type UpdateAgentRequest struct {
-	Name        string `json:"name" binding:"required"`
-	Description string `json:"description"`
-	DailyLimit  int    `json:"daily_limit" binding:"min=1,max=500000"` // Only used by admins
+	Name              string `json:"name" binding:"required"`
+	Description       string `json:"description"`
+	DailyLimit        int    `json:"daily_limit" binding:"min=1,max=500000"` // Only used by admins
+	ProfilePictureURL string `json:"profile_picture_url" binding:"omitempty,url"`
 }
 
 // ListAgents returns all agents for the current user
@@ -248,6 +249,11 @@ func (h *AgentHandler) UpdateAgent(c *gin.Context) {
 		}
 	} // For non-admins, ignore any daily_limit in the request
 
+	// Set profile_picture_url if present
+	if req.ProfilePictureURL != "" {
+		agent.ProfilePictureURL = req.ProfilePictureURL
+	}
+
 	if err := h.agentService.UpdateAgent(c, agent); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update agent"})
 		return
@@ -403,9 +409,10 @@ func (h *AgentHandler) GetAgentPublic(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"id":          agent.ID,
-		"name":        agent.Name,
-		"description": agent.Description,
+		"id":                  agent.ID,
+		"name":                agent.Name,
+		"description":         agent.Description,
+		"profile_picture_url": agent.ProfilePictureURL,
 	})
 }
 

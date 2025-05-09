@@ -19,7 +19,6 @@ import (
 )
 
 type UserService interface {
-	UpdateProfilePicture(ctx context.Context, userID uuid.UUID, url string) error
 	CreateUser(ctx context.Context, email, password, name string) (*models.User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
@@ -124,6 +123,35 @@ func (s *userService) UpdateUser(ctx context.Context, user *models.User) error {
 		}
 		if userWithEmail != nil && userWithEmail.ID != user.ID {
 			return ErrEmailAlreadyExists
+		}
+	}
+
+	// Validate and update profile picture URL if changed and not empty
+	if user.ProfilePictureURL != "" && user.ProfilePictureURL != existingUser.ProfilePictureURL {
+		const maxSize = 5 * 1024 * 1024 // 5 MB
+		parsed, err := url.ParseRequestURI(user.ProfilePictureURL)
+		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+			return errors.New("invalid URL format for profile_picture_url")
+		}
+		// HEAD request to check content length
+		req, err := http.NewRequestWithContext(ctx, "HEAD", user.ProfilePictureURL, nil)
+		if err != nil {
+			return errors.New("failed to create request for image size check")
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return errors.New("could not reach image URL")
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+			return errors.New("image URL did not return success")
+		}
+		clStr := resp.Header.Get("Content-Length")
+		if clStr != "" {
+			cl, err := strconv.ParseInt(clStr, 10, 64)
+			if err == nil && cl > maxSize {
+				return errors.New("image exceeds 5MB size limit")
+			}
 		}
 	}
 
@@ -240,46 +268,6 @@ func (s *userService) GetUsers(ctx context.Context, page, pageSize int) ([]*mode
 	}
 
 	return users, count, nil
-}
-
-// UpdateProfilePicture updates the user's profile picture URL with validation
-func (s *userService) UpdateProfilePicture(ctx context.Context, userID uuid.UUID, urlStr string) error {
-	const maxSize = 5 * 1024 * 1024 // 5 MB
-	parsed, err := url.ParseRequestURI(urlStr)
-	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return errors.New("invalid URL format")
-	}
-
-	// HEAD request to check content length
-	req, err := http.NewRequestWithContext(ctx, "HEAD", urlStr, nil)
-	if err != nil {
-		return errors.New("failed to create request for image size check")
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return errors.New("could not reach image URL")
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-		return errors.New("image URL did not return success")
-	}
-	clStr := resp.Header.Get("Content-Length")
-	if clStr != "" {
-		cl, err := strconv.ParseInt(clStr, 10, 64)
-		if err == nil && cl > maxSize {
-			return errors.New("image exceeds 5MB size limit")
-		}
-	}
-
-	user, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil {
-		return err
-	}
-	if user == nil {
-		return ErrUserNotFound
-	}
-	user.ProfilePictureURL = urlStr
-	return s.userRepo.Update(ctx, user)
 }
 
 // EnsureAdminUser checks if an admin user exists and creates one if not

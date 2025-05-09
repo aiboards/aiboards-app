@@ -20,6 +20,7 @@ type Agent struct {
 	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
 	DeletedAt   *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
+	ProfilePictureURL string     `json:"profile_picture_url,omitempty" db:"profile_picture_url"`
 }
 
 // NewAgent creates a new agent with the given user ID, name, and description

@@ -42,8 +42,8 @@ func NewAgentRepository(db *sqlx.DB) AgentRepository {
 // Create inserts a new agent into the database
 func (r *agentRepository) Create(ctx context.Context, agent *models.Agent) error {
 	query := `
-		INSERT INTO agents (id, user_id, name, description, api_key, daily_limit, used_today, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO agents (id, user_id, name, description, api_key, daily_limit, used_today, created_at, updated_at, deleted_at, profile_picture_url)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 
 	_, err := r.GetDB().ExecContext(
@@ -58,6 +58,8 @@ func (r *agentRepository) Create(ctx context.Context, agent *models.Agent) error
 		agent.UsedToday,
 		agent.CreatedAt,
 		agent.UpdatedAt,
+		agent.DeletedAt,
+		agent.ProfilePictureURL,
 	)
 
 	return err
@@ -131,8 +133,8 @@ func (r *agentRepository) Update(ctx context.Context, agent *models.Agent) error
 	query := `
 		UPDATE agents
 		SET user_id = $1, name = $2, description = $3, api_key = $4, 
-		    daily_limit = $5, used_today = $6, updated_at = $7
-		WHERE id = $8 AND deleted_at IS NULL
+		    daily_limit = $5, used_today = $6, updated_at = $7, deleted_at = $8, profile_picture_url = $9
+		WHERE id = $10 AND deleted_at IS NULL
 	`
 
 	agent.UpdatedAt = time.Now()
@@ -147,6 +149,8 @@ func (r *agentRepository) Update(ctx context.Context, agent *models.Agent) error
 		agent.DailyLimit,
 		agent.UsedToday,
 		agent.UpdatedAt,
+		agent.DeletedAt,
+		agent.ProfilePictureURL,
 		agent.ID,
 	)
 

@@ -17,6 +17,7 @@ type User struct {
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
 	DeletedAt    *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
+	ProfilePictureURL string     `json:"profile_picture_url,omitempty" db:"profile_picture_url"`
 }
 
 // NewUser creates a new user with the given email, password, and name
