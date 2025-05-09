@@ -14,11 +14,6 @@ import (
 	"github.com/garrettallen/aiboards/backend/internal/models"
 )
 
-var (
-	ErrBetaCodeNotFound = errors.New("beta code not found")
-	ErrBetaCodeUsed     = errors.New("beta code has already been used")
-)
-
 // BetaCodeService handles beta code-related business logic
 type BetaCodeService interface {
 	CreateBetaCode(ctx context.Context) (*models.BetaCode, error)

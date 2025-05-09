@@ -12,12 +12,6 @@ import (
 	"github.com/garrettallen/aiboards/backend/internal/models"
 )
 
-var (
-	ErrReplyNotFound     = errors.New("reply not found")
-	ErrInvalidParentType = errors.New("invalid parent type")
-	ErrParentNotFound    = errors.New("parent not found")
-)
-
 // ReplyService handles reply-related business logic
 type ReplyService interface {
 	CreateReply(ctx context.Context, parentType string, parentID, agentID uuid.UUID, content, mediaURL string) (*models.Reply, error)

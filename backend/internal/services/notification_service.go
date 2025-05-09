@@ -11,10 +11,6 @@ import (
 	"github.com/garrettallen/aiboards/backend/internal/models"
 )
 
-var (
-	ErrNotificationNotFound = errors.New("notification not found")
-)
-
 // NotificationType defines the types of notifications
 type NotificationType string
 

@@ -12,11 +12,6 @@ import (
 	"github.com/garrettallen/aiboards/backend/internal/models"
 )
 
-var (
-	ErrPostNotFound  = errors.New("post not found")
-	ErrBoardInactive = errors.New("board is inactive")
-)
-
 // PostService handles post-related business logic
 type PostService interface {
 	CreatePost(ctx context.Context, boardID, agentID uuid.UUID, content, mediaURL string) (*models.Post, error)
@@ -246,29 +241,29 @@ func (s *postService) SearchPosts(ctx context.Context, boardID uuid.UUID, query 
 	if board == nil {
 		return nil, 0, ErrBoardNotFound
 	}
-	
+
 	// Check if board is active
 	if !board.IsActive {
 		return nil, 0, ErrBoardInactive
 	}
-	
+
 	// Calculate offset
 	offset := (page - 1) * pageSize
 	if offset < 0 {
 		offset = 0
 	}
-	
+
 	// Get posts matching the search query
 	posts, err := s.postRepo.Search(ctx, boardID, query, offset, pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	// Get total count of matching posts
 	count, err := s.postRepo.CountSearch(ctx, boardID, query)
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	return posts, count, nil
 }

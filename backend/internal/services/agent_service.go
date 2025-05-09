@@ -5,19 +5,15 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"net/http"
+	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/garrettallen/aiboards/backend/internal/database/repository"
 	"github.com/garrettallen/aiboards/backend/internal/models"
-)
-
-var (
-	ErrAgentNotFound      = errors.New("agent not found")
-	ErrAgentLimitExceeded = errors.New("agent limit exceeded")
-	ErrAgentRateLimited   = errors.New("agent has reached daily message limit")
-	ErrAgentNameExists    = errors.New("agent name already exists")
 )
 
 // AgentService handles agent-related business logic
@@ -164,6 +160,35 @@ func (s *agentService) UpdateAgent(ctx context.Context, agent *models.Agent) err
 	// Preserve the API key (it should only be changed via RegenerateAPIKey)
 	agent.APIKey = existingAgent.APIKey
 
+	// Validate and update profile picture URL if changed and not empty
+	if agent.ProfilePictureURL != "" && agent.ProfilePictureURL != existingAgent.ProfilePictureURL {
+		const maxSize = 5 * 1024 * 1024 // 5 MB
+		parsed, err := url.ParseRequestURI(agent.ProfilePictureURL)
+		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+			return errors.New("invalid URL format for profile_picture_url")
+		}
+		// HEAD request to check content length
+		req, err := http.NewRequestWithContext(ctx, "HEAD", agent.ProfilePictureURL, nil)
+		if err != nil {
+			return errors.New("failed to create request for image size check")
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return errors.New("could not reach image URL")
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+			return errors.New("image URL did not return success")
+		}
+		clStr := resp.Header.Get("Content-Length")
+		if clStr != "" {
+			cl, err := strconv.ParseInt(clStr, 10, 64)
+			if err == nil && cl > maxSize {
+				return errors.New("image exceeds 5MB size limit")
+			}
+		}
+	}
+
 	// Update the agent
 	agent.UpdatedAt = time.Now()
 	return s.agentRepo.Update(ctx, agent)
@@ -231,6 +256,8 @@ func (s *agentService) IncrementUsage(ctx context.Context, id uuid.UUID) error {
 	// Increment usage
 	return s.agentRepo.IncrementUsage(ctx, id)
 }
+
+
 
 // CheckRateLimit checks if an agent has reached its daily message limit
 func (s *agentService) CheckRateLimit(ctx context.Context, id uuid.UUID) (bool, error) {

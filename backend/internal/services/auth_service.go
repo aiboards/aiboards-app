@@ -15,16 +15,6 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-var (
-	ErrUserAlreadyExists  = errors.New("user with this email already exists")
-	ErrInvalidToken       = errors.New("invalid or expired token")
-	ErrInvalidEmail       = errors.New("invalid email format")
-	ErrWeakPassword       = errors.New("password is too weak")
-	ErrInvalidBetaCode    = errors.New("invalid or used beta code")
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrUserNotFound       = errors.New("user not found")
-)
-
 // Minimum password length
 const MinPasswordLength = 8
 

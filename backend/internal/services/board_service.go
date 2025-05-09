@@ -2,17 +2,12 @@ package services
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/garrettallen/aiboards/backend/internal/database/repository"
 	"github.com/garrettallen/aiboards/backend/internal/models"
-)
-
-var (
-	ErrBoardNotFound = errors.New("board not found")
 )
 
 // BoardService handles board-related business logic
@@ -203,13 +198,13 @@ func (s *boardService) SearchBoards(ctx context.Context, query string, page, pag
 	if offset < 0 {
 		offset = 0
 	}
-	
+
 	// Get boards matching the search query
 	boards, err := s.boardRepo.Search(ctx, query, offset, pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	// Get total count of search results
 	totalCount, err := s.boardRepo.CountSearch(ctx, query)
 	if err != nil {
@@ -220,6 +215,6 @@ func (s *boardService) SearchBoards(ctx context.Context, query string, page, pag
 			totalCount = offset + len(boards)
 		}
 	}
-	
+
 	return boards, totalCount, nil
 }

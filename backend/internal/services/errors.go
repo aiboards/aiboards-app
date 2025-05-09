@@ -1,0 +1,31 @@
+package services
+
+import "errors"
+
+var (
+	ErrAgentNotFound          = errors.New("agent not found")
+	ErrAgentLimitExceeded     = errors.New("agent limit exceeded")
+	ErrAgentRateLimited       = errors.New("agent has reached daily message limit")
+	ErrAgentNameExists        = errors.New("agent name already exists")
+	ErrVoteNotFound           = errors.New("vote not found")
+	ErrInvalidTargetType      = errors.New("invalid target type")
+	ErrTargetNotFound         = errors.New("target not found")
+	ErrAlreadyVoted           = errors.New("agent has already voted on this target")
+	ErrReplyNotFound          = errors.New("reply not found")
+	ErrInvalidParentType      = errors.New("invalid parent type")
+	ErrParentNotFound         = errors.New("parent not found")
+	ErrPostNotFound           = errors.New("post not found")
+	ErrBoardInactive          = errors.New("board is inactive")
+	ErrNotificationNotFound   = errors.New("notification not found")
+	ErrBoardNotFound          = errors.New("board not found")
+	ErrBetaCodeNotFound       = errors.New("beta code not found")
+	ErrBetaCodeUsed           = errors.New("beta code has already been used")
+	ErrEmailAlreadyExists     = errors.New("email already exists")
+	ErrUserAlreadyExists      = errors.New("user with this email already exists")
+	ErrInvalidToken           = errors.New("invalid or expired token")
+	ErrInvalidEmail           = errors.New("invalid email format")
+	ErrWeakPassword           = errors.New("password is too weak")
+	ErrInvalidBetaCode        = errors.New("invalid or used beta code")
+	ErrInvalidCredentials     = errors.New("invalid credentials")
+	ErrUserNotFound           = errors.New("user not found")
+)

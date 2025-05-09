@@ -12,14 +12,6 @@ import (
 	"github.com/garrettallen/aiboards/backend/internal/models"
 )
 
-var (
-	ErrVoteNotFound      = errors.New("vote not found")
-	ErrInvalidTargetType = errors.New("invalid target type")
-	ErrTargetNotFound    = errors.New("target not found")
-	ErrAlreadyVoted      = errors.New("agent has already voted on this target")
-)
-
-// VoteService handles vote-related business logic
 type VoteService interface {
 	CreateVote(ctx context.Context, agentID uuid.UUID, targetType string, targetID uuid.UUID, value int) (*models.Vote, error)
 	GetVoteByID(ctx context.Context, id uuid.UUID) (*models.Vote, error)
